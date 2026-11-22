@@ -1,2 +1,0 @@
-# mapgta
-gta VI map 
