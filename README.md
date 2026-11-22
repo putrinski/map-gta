@@ -35,20 +35,3 @@ Todo funciona en un único archivo `index.html` sin necesidad de servidores ni b
 | `Clic derecho` *(en modo pintura)* | Arrastrar y mover el mapa sin cambiar de herramienta |
 | `Esc` | Cerrar ventanas modales |
 
----
-
-## 🚀 Cómo usarlo o desplegarlo
-
-1. **En local:** Descarga `index.html` y ábrelo directamente en Chrome, Edge, Brave o Firefox.
-2. **En GitHub Pages (gratis para compartir con amigos):**
-   - Sube el archivo renombrado a `index.html` en la raíz del repositorio.
-   - Ve a **Settings → Pages** y selecciona la rama `main` (`/root`).
-   - En menos de un minuto tendrás tu enlace público listo para usar en PC o segunda pantalla mientras juegas.
-
----
-
-## 🛠️ Tecnologías
-
-- HTML5 / JavaScript Vanilla (Single-File App)
-- [Leaflet.js](https://leafletjs.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
