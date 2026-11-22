@@ -305,14 +305,14 @@
           <div class="w-[1px] h-6 bg-white/10 mx-0.5"></div>
 
           <!-- [3] Descubrir (Erase Blur) -->
-          <button data-tool="eraseFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Borrar difuminado para descubrir zona (Tecla 3)">
+          <button data-tool="eraseFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Borrar difuminado para descubrir zona (Tecla 3 · Clic der.: mover mapa)">
             <span>🔦</span>
             <span class="hidden sm:inline">Descubrir</span>
             <kbd class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">3</kbd>
           </button>
 
           <!-- [4] Cubrir (Restore Blur) -->
-          <button data-tool="paintFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Volver a difuminar zona (Tecla 4)">
+          <button data-tool="paintFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Volver a difuminar zona (Tecla 4 · Clic der.: mover mapa)">
             <span>🌫️</span>
             <span class="hidden sm:inline">Cubrir</span>
             <kbd class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">4</kbd>
@@ -377,6 +377,8 @@
           <span id="hudCoords">Lat: 0.7030, Lng: -0.7030</span>
           <span class="hidden sm:inline text-white/20">|</span>
           <span class="hidden sm:inline text-slate-400 font-sans">Shift+Clic pin rápido</span>
+          <span class="hidden md:inline text-white/20">|</span>
+          <span class="hidden md:inline text-slate-400 font-sans">Clic der.: mover mapa</span>
         </div>
       </div>
     </main>
@@ -803,6 +805,8 @@
 
           isPaintingFog: false,
           lastPaintLatLng: null,
+          isRightClickPanning: false,
+          lastPanClient: null,
         };
 
         function saveFogStrokes() {
@@ -1282,6 +1286,10 @@
 
         function setActiveTool(tool) {
           state.tool = tool;
+          state.isPaintingFog = false;
+          state.lastPaintLatLng = null;
+          state.isRightClickPanning = false;
+          state.lastPanClient = null;
 
           document.querySelectorAll('.tool-btn').forEach((btn) => {
             const active = btn.dataset.tool === tool;
@@ -1302,8 +1310,10 @@
           });
 
           const isFogTool = tool === 'eraseFog' || tool === 'paintFog';
-          fogControlsGroup.classList.toggle('hidden', !isFogTool);
-          fogControlsGroup.classList.toggle('flex', isFogTool);
+          if (fogControlsGroup) {
+            fogControlsGroup.classList.toggle('hidden', !isFogTool);
+            fogControlsGroup.classList.toggle('flex', isFogTool);
+          }
 
           if (isFogTool) {
             map.dragging.disable();
@@ -1317,6 +1327,12 @@
           }
         }
 
+        mapWorkspace.addEventListener('contextmenu', (e) => {
+          if (state.tool === 'eraseFog' || state.tool === 'paintFog' || state.isRightClickPanning) {
+            e.preventDefault();
+          }
+        });
+
         mapWorkspace.addEventListener('pointermove', (e) => {
           const rect = map.getContainer().getBoundingClientRect();
           const sx = e.clientX - rect.left;
@@ -1324,6 +1340,10 @@
           const latlng = map.containerPointToLatLng([sx, sy]);
 
           document.getElementById('hudCoords').textContent = `Lat: ${latlng.lat.toFixed(4)}, Lng: ${latlng.lng.toFixed(4)}`;
+
+          if (state.isRightClickPanning) {
+            return;
+          }
 
           if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
             brushCursorRing.classList.remove('hidden');
@@ -1340,6 +1360,18 @@
           }
         });
 
+        window.addEventListener('pointermove', (e) => {
+          if (state.isRightClickPanning && state.lastPanClient) {
+            const dx = e.clientX - state.lastPanClient.x;
+            const dy = e.clientY - state.lastPanClient.y;
+            if (dx !== 0 || dy !== 0) {
+              map.panBy([-dx, -dy], { animate: false });
+              state.lastPanClient = { x: e.clientX, y: e.clientY };
+              fogController.scheduleRedraw();
+            }
+          }
+        });
+
         mapWorkspace.addEventListener('pointerleave', () => {
           brushCursorRing.classList.add('hidden');
         });
@@ -1349,7 +1381,16 @@
             return;
           }
 
-          if ((state.tool === 'eraseFog' || state.tool === 'paintFog') && e.button === 0) {
+          if ((state.tool === 'eraseFog' || state.tool === 'paintFog') && e.button === 2) {
+            e.preventDefault();
+            state.isRightClickPanning = true;
+            state.lastPanClient = { x: e.clientX, y: e.clientY };
+            brushCursorRing.classList.add('hidden');
+            document.getElementById('map').style.cursor = 'grabbing';
+            return;
+          }
+
+          if ((state.tool === 'eraseFog' || state.tool === 'paintFog') && e.button === 0 && !state.isRightClickPanning) {
             const rect = map.getContainer().getBoundingClientRect();
             const latlng = map.containerPointToLatLng([e.clientX - rect.left, e.clientY - rect.top]);
             const mode = state.tool === 'eraseFog' ? 'erase' : 'paint';
@@ -1360,13 +1401,23 @@
           }
         });
 
-        window.addEventListener('pointerup', () => {
+        function endPointerInteractions() {
           if (state.isPaintingFog) {
             state.isPaintingFog = false;
             state.lastPaintLatLng = null;
             saveFogStrokes();
           }
-        });
+          if (state.isRightClickPanning) {
+            state.isRightClickPanning = false;
+            state.lastPanClient = null;
+            if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
+              document.getElementById('map').style.cursor = 'none';
+            }
+          }
+        }
+
+        window.addEventListener('pointerup', endPointerInteractions);
+        window.addEventListener('pointercancel', endPointerInteractions);
 
         map.on('click', (e) => {
           if (state.tool === 'pin' || e.originalEvent.shiftKey) {
