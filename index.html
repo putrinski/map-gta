@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Leonida Recon HD — Mapa Sin Spoilers & Difuminado</title>
+  <title>Leonida Recon HD — Mapa Sin Spoilers & Salas Online</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,6 +11,10 @@
   <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase App & Realtime Database (Compat SDK para archivo único HTML) -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 
   <!-- Google Fonts: Inter & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -91,7 +95,7 @@
       inset: 0;
       z-index: 410;
       pointer-events: none;
-      transition: backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+      transition: backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease, background-color 0.2s ease;
       will-change: mask-image, -webkit-mask-image;
     }
     .fog-mode-soft #fogBlurOverlay {
@@ -323,7 +327,7 @@
           </button>
         </div>
 
-        <!-- Row 2: Fog Mode, Brush Slider, Contrast, Day/Night, Reset, Screenshot & Settings -->
+        <!-- Row 2: Fog Mode, Brush Slider, Contrast, Day/Night, Reset, Online Room & Settings -->
         <div class="flex flex-wrap items-center justify-center gap-1.5">
           <!-- Brush Size Slider -->
           <div id="fogControlsGroup" class="hidden items-center gap-2 px-2.5 py-1 rounded-xl bg-black/35 border border-white/10">
@@ -354,6 +358,12 @@
           <button id="topResetFogBtn" class="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-400/30 text-xs font-medium text-indigo-200 transition" title="Reiniciar difuminado en todo el mapa">
             <span>🔄</span>
             <span class="hidden xl:inline">Reiniciar Niebla</span>
+          </button>
+
+          <!-- Online Co-op Room Button -->
+          <button id="roomStatusBtn" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slatePanel/90 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition" title="Crear o unirse a una sala cooperativa en tiempo real">
+            <span id="roomStatusDot">🌐</span>
+            <span id="roomStatusLabel" class="hidden sm:inline">Sala Online</span>
           </button>
 
           <!-- Center Map -->
@@ -615,6 +625,101 @@
     </div>
   </div>
 
+  <!-- Modal: Online Co-op Room -->
+  <div id="roomModal" class="hidden fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-2xl border border-white/15 shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/50 to-cyan-950/50">
+        <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <span>🌐</span>
+          <span>Mapa Conjunto (Salas Online)</span>
+        </h2>
+        <button id="closeRoomModalBtn" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- Active Room Panel (shown when connected) -->
+        <div id="roomActivePanel" class="hidden space-y-3.5">
+          <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-400/35 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Sincronizando en vivo
+              </span>
+              <span id="roomActiveNameBadge" class="px-2 py-0.5 rounded-lg bg-black/40 text-xs font-mono font-bold text-white"></span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Todos los pines, ramas y zonas descubiertas se sincronizan al instante con cualquiera que abra este enlace.
+            </p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-slate-300">Enlace de invitación para tus amigos</label>
+            <div class="flex gap-2">
+              <input id="roomInviteLinkInput" type="text" readonly
+                class="flex-1 bg-slateDark border border-white/15 rounded-xl px-3 py-2 text-[11px] font-mono text-cyan-200 focus:outline-none" />
+              <button type="button" id="copyRoomLinkBtn"
+                class="px-3.5 py-2 rounded-xl bg-viceCyan hover:bg-cyan-400 text-slateDark text-xs font-bold shrink-0 transition">
+                📋 Copiar
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-1 flex items-center justify-between gap-2 border-t border-white/10">
+            <button type="button" id="leaveRoomBtn"
+              class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/35 text-xs font-semibold text-rose-200 transition">
+              🚪 Salir a Modo Local
+            </button>
+            <button type="button" id="doneRoomModalBtn"
+              class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white transition">
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Join / Create Room Form (shown in local mode) -->
+        <form id="roomJoinForm" class="space-y-4">
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Crea o únete a una sala con un nombre secreto. Comparte el enlace <span class="font-mono text-viceCyan">?room=nombre</span> con tus amigos para explorar Leonida juntos en tiempo real.
+          </p>
+
+          <div class="space-y-1.5">
+            <label for="roomNameInput" class="block text-xs font-semibold text-slate-300">Nombre o código de la sala</label>
+            <div class="flex gap-2">
+              <input id="roomNameInput" type="text" required maxlength="36" placeholder="Ej: leonida-amigos-26"
+                class="flex-1 bg-slateDark border border-white/15 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-viceCyan transition" />
+              <button type="button" id="randomRoomNameBtn"
+                class="px-3 py-2 rounded-xl bg-slatePanel hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 shrink-0 transition" title="Generar código aleatorio">
+                🎲
+              </button>
+            </div>
+            <p class="text-[10px] text-slate-400">Solo letras, números y guiones. Cualquiera con el mismo nombre entra a la misma sala.</p>
+          </div>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slatePanel/70 border border-white/10 cursor-pointer">
+            <input id="roomSeedLocalCheckbox" type="checkbox" checked class="mt-0.5 w-4 h-4 accent-cyan-400 rounded cursor-pointer" />
+            <div>
+              <span class="block text-xs font-semibold text-slate-200">Subir mi mapa local si la sala es nueva</span>
+              <span class="block text-[11px] text-slate-400">Si la sala ya tiene datos de tus amigos, se cargarán los de la sala sin sobrescribirlos.</span>
+            </div>
+          </label>
+
+          <div class="pt-1 flex justify-end gap-2">
+            <button type="button" id="cancelRoomModalBtn" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 transition">
+              Cancelar
+            </button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slateDark text-xs font-bold shadow-lg shadow-emerald-500/25 transition">
+              🚀 Entrar a la Sala
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Custom Confirm Dialog -->
   <div id="confirmDialog" class="hidden fixed inset-0 z-[2100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="glass-panel w-full max-w-sm rounded-2xl border border-white/15 p-5 shadow-2xl space-y-4">
@@ -634,7 +739,7 @@
     /**
      * LEONIDA RECON HD — Single TileLayer + Backdrop-Filter Gaussian Fog Mask
      * + Pending/Completed Interior Tracking + Marker Groups / Branches
-     * + Right-Click Pan in Paint Mode
+     * + Right-Click Pan in Paint Mode + Firebase Realtime Database Co-op Rooms
      */
     window.addEventListener('DOMContentLoaded', () => {
       try {
@@ -828,13 +933,304 @@
           linkedGroups: new Set(),
           activeGroupForNewPin: '',
 
+          // Online Co-op Room State
+          roomId: null,
+          roomConnected: false,
+          pendingFogBatch: [],
+
           isPaintingFog: false,
           lastPaintLatLng: null,
           isRightClickPanning: false,
           lastRightPanClient: null,
         };
 
+        // =========================================================================
+        // 3B. FIREBASE REALTIME DATABASE — ONLINE ROOMS (?room=nombre)
+        // =========================================================================
+        const FIREBASE_CONFIG = {
+          apiKey: "AIzaSyB8dTlFQ3B77y_lqX2Om99As2JhcbEg_Hw",
+          authDomain: "leonida-map-coop.firebaseapp.com",
+          databaseURL: "https://leonida-map-coop-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "leonida-map-coop",
+          storageBucket: "leonida-map-coop.firebasestorage.app",
+          messagingSenderId: "234774651466",
+          appId: "1:234774651466:web:99cdae1365c840b3297cb3"
+        };
+
+        let firebaseDb = null;
+        try {
+          if (typeof firebase !== 'undefined') {
+            const fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+            firebaseDb = fbApp.database();
+          }
+        } catch (fbErr) {
+          console.error('No se pudo inicializar Firebase:', fbErr);
+        }
+
+        function sanitizeRoomId(raw) {
+          return String(raw || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 36);
+        }
+
+        function getRoomIdFromUrl() {
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const fromQuery = params.get('room');
+            if (fromQuery) return sanitizeRoomId(fromQuery);
+
+            const hashMatch = window.location.hash.match(/^#\/?room\/([^/?#]+)/i);
+            if (hashMatch && hashMatch[1]) return sanitizeRoomId(decodeURIComponent(hashMatch[1]));
+          } catch {
+            return '';
+          }
+          return '';
+        }
+
+        function buildRoomInviteUrl(roomId) {
+          try {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            url.searchParams.set('room', roomId);
+            return url.toString();
+          } catch {
+            return `?room=${encodeURIComponent(roomId)}`;
+          }
+        }
+
+        function syncBrowserUrlWithRoom(roomId) {
+          try {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            if (roomId) {
+              url.searchParams.set('room', roomId);
+            } else {
+              url.searchParams.delete('room');
+            }
+            window.history.replaceState({}, '', url.toString());
+          } catch {
+            // Ignored on file:// or sandboxed iframes
+          }
+        }
+
+        const roomSync = (() => {
+          let activeRoomRef = null;
+          let markersRef = null;
+          let fogBatchesRef = null;
+
+          function updateRoomUI() {
+            const btn = document.getElementById('roomStatusBtn');
+            const dot = document.getElementById('roomStatusDot');
+            const label = document.getElementById('roomStatusLabel');
+            const activePanel = document.getElementById('roomActivePanel');
+            const joinForm = document.getElementById('roomJoinForm');
+            const badge = document.getElementById('roomActiveNameBadge');
+            const inviteInput = document.getElementById('roomInviteLinkInput');
+
+            if (state.roomId) {
+              btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition';
+              dot.textContent = '🟢';
+              label.textContent = `Sala: ${state.roomId}`;
+              activePanel.classList.remove('hidden');
+              joinForm.classList.add('hidden');
+              badge.textContent = state.roomId;
+              inviteInput.value = buildRoomInviteUrl(state.roomId);
+            } else {
+              btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slatePanel/90 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition';
+              dot.textContent = '🌐';
+              label.textContent = 'Sala Online';
+              activePanel.classList.add('hidden');
+              joinForm.classList.remove('hidden');
+            }
+          }
+
+          function detachListeners() {
+            if (markersRef) markersRef.off();
+            if (fogBatchesRef) fogBatchesRef.off();
+            activeRoomRef = null;
+            markersRef = null;
+            fogBatchesRef = null;
+            state.roomConnected = false;
+          }
+
+          async function joinRoom(rawRoomId, seedLocalIfEmpty = false) {
+            const roomId = sanitizeRoomId(rawRoomId);
+            if (!roomId) {
+              showToast('Escribe un nombre válido para la sala', 'error');
+              return false;
+            }
+            if (!firebaseDb) {
+              showToast('No se pudo conectar con Firebase. Revisa tu conexión.', 'error');
+              return false;
+            }
+
+            detachListeners();
+            state.roomId = roomId;
+            state.pendingFogBatch = [];
+            syncBrowserUrlWithRoom(roomId);
+            updateRoomUI();
+
+            activeRoomRef = firebaseDb.ref(`rooms/${roomId}`);
+            markersRef = activeRoomRef.child('markers');
+            fogBatchesRef = activeRoomRef.child('fogBatches');
+
+            try {
+              const snap = await activeRoomRef.once('value');
+              const existing = snap.val();
+
+              if (!existing && seedLocalIfEmpty) {
+                const localMarkers = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
+                const localFog = safeLoadArray(FOG_STROKES_KEY);
+                const markersMap = {};
+                localMarkers.forEach((m, idx) => {
+                  if (m && m.id) {
+                    markersMap[m.id] = { ...m, createdTs: m.createdTs || (Date.now() - idx * 1000) };
+                  }
+                });
+
+                const seedPayload = {
+                  createdAt: Date.now(),
+                  markers: Object.keys(markersMap).length ? markersMap : null,
+                  fogBatches: localFog.length ? { initial_seed: localFog } : null
+                };
+                await activeRoomRef.set(seedPayload);
+              }
+            } catch (err) {
+              console.error('Error al comprobar/inicializar sala:', err);
+              showToast('Error de permisos o conexión con la sala', 'error');
+              leaveRoom(false);
+              return false;
+            }
+
+            // Listen to real-time markers updates
+            markersRef.on('value', (snap) => {
+              const val = snap.val();
+              const arr = val ? Object.values(val) : [];
+              arr.sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
+              state.markers = migrateMarkers(arr);
+              renderMarkersOnMap();
+              renderSidebarMarkers();
+            }, (err) => {
+              console.error('Error escuchando marcadores:', err);
+            });
+
+            // Listen to real-time fog updates
+            fogBatchesRef.on('value', (snap) => {
+              const val = snap.val();
+              const flattened = [];
+              if (val && typeof val === 'object') {
+                Object.keys(val).sort().forEach((batchKey) => {
+                  const batch = val[batchKey];
+                  if (Array.isArray(batch)) {
+                    for (let i = 0; i < batch.length; i++) {
+                      if (batch[i]) flattened.push(batch[i]);
+                    }
+                  }
+                });
+              }
+              if (state.pendingFogBatch.length > 0) {
+                state.fogStrokes = flattened.concat(state.pendingFogBatch);
+              } else {
+                state.fogStrokes = flattened;
+              }
+              fogController.setStrokes(state.fogStrokes);
+            }, (err) => {
+              console.error('Error escuchando niebla:', err);
+            });
+
+            state.roomConnected = true;
+            showToast(`🟢 Conectado a la sala "${roomId}"`, 'success');
+            return true;
+          }
+
+          function leaveRoom(notify = true) {
+            detachListeners();
+            state.roomId = null;
+            state.pendingFogBatch = [];
+            syncBrowserUrlWithRoom('');
+            updateRoomUI();
+
+            // Restore local storage state
+            state.markers = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
+            state.fogStrokes = safeLoadArray(FOG_STROKES_KEY);
+            fogController.setStrokes(state.fogStrokes);
+            renderMarkersOnMap();
+            renderSidebarMarkers();
+
+            if (notify) {
+              showToast('Has vuelto a tu mapa local', 'info');
+            }
+          }
+
+          function upsertMarker(pin) {
+            if (!markersRef || !pin || !pin.id) return;
+            markersRef.child(pin.id).set(pin).catch((err) => {
+              console.error('Error guardando pin en sala:', err);
+              showToast('Error al sincronizar el pin', 'error');
+            });
+          }
+
+          function removeMarker(id) {
+            if (!markersRef || !id) return;
+            markersRef.child(id).remove().catch((err) => {
+              console.error('Error eliminando pin en sala:', err);
+              showToast('Error al eliminar el pin de la sala', 'error');
+            });
+          }
+
+          function replaceAllMarkers(markersArr) {
+            if (!markersRef) return;
+            const markersMap = {};
+            markersArr.forEach((m, idx) => {
+              if (m && m.id) {
+                markersMap[m.id] = { ...m, createdTs: m.createdTs || (Date.now() - idx * 1000) };
+              }
+            });
+            markersRef.set(Object.keys(markersMap).length ? markersMap : null).catch((err) => {
+              console.error('Error importando pines en sala:', err);
+            });
+          }
+
+          function flushPendingFogBatch() {
+            if (!fogBatchesRef || state.pendingFogBatch.length === 0) return;
+            const batchToSend = state.pendingFogBatch.slice();
+            state.pendingFogBatch = [];
+            fogBatchesRef.push(batchToSend).catch((err) => {
+              console.error('Error enviando trazo de niebla:', err);
+            });
+          }
+
+          function replaceAllFog(strokesArr) {
+            if (!fogBatchesRef) return;
+            state.pendingFogBatch = [];
+            const payload = Array.isArray(strokesArr) && strokesArr.length > 0
+              ? { ['reset_' + Date.now()]: strokesArr }
+              : null;
+            fogBatchesRef.set(payload).catch((err) => {
+              console.error('Error actualizando niebla en sala:', err);
+            });
+          }
+
+          return {
+            updateRoomUI,
+            joinRoom,
+            leaveRoom,
+            upsertMarker,
+            removeMarker,
+            replaceAllMarkers,
+            flushPendingFogBatch,
+            replaceAllFog
+          };
+        })();
+
         function saveFogStrokes() {
+          if (state.roomId) {
+            roomSync.replaceAllFog(state.fogStrokes);
+            return;
+          }
           const strokes = Array.isArray(state.fogStrokes) ? state.fogStrokes : [];
           try {
             localStorage.setItem(FOG_STROKES_KEY, JSON.stringify(strokes));
@@ -1059,12 +1455,16 @@
           if (!Array.isArray(state.fogStrokes)) state.fogStrokes = [];
           const mpp = getMetersPerPixel(latlng.lat, map.getZoom());
           const radiusMeters = state.brushSize * mpp;
-          state.fogStrokes.push({
+          const strokeObj = {
             lat: Number(latlng.lat.toFixed(6)),
             lng: Number(latlng.lng.toFixed(6)),
             radiusMeters: Math.round(radiusMeters),
             mode
-          });
+          };
+          state.fogStrokes.push(strokeObj);
+          if (state.roomId) {
+            state.pendingFogBatch.push(strokeObj);
+          }
           fogController.setStrokes(state.fogStrokes);
         }
 
@@ -1170,7 +1570,9 @@
         }
 
         function saveMarkers() {
-          localStorage.setItem(PINS_STORAGE_KEY, JSON.stringify(state.markers));
+          if (!state.roomId) {
+            localStorage.setItem(PINS_STORAGE_KEY, JSON.stringify(state.markers));
+          }
           renderMarkersOnMap();
           renderSidebarMarkers();
         }
@@ -1365,7 +1767,11 @@
           const nextCat = curr.category === 'interior_pending' ? 'interior_done' : 'interior_pending';
           state.markers[idx] = { ...curr, category: nextCat };
           map.closePopup();
-          saveMarkers();
+          if (state.roomId) {
+            roomSync.upsertMarker(state.markers[idx]);
+          } else {
+            saveMarkers();
+          }
           showToast(
             nextCat === 'interior_done'
               ? '✅ Interior marcado como completado'
@@ -1388,7 +1794,11 @@
           const ok = await showConfirm('¿Eliminar marcador?', `Se borrará "${m.title}" y sus notas.`);
           if (!ok) return;
           state.markers = state.markers.filter(item => item.id !== id);
-          saveMarkers();
+          if (state.roomId) {
+            roomSync.removeMarker(id);
+          } else {
+            saveMarkers();
+          }
           showToast('Marcador eliminado');
         };
 
@@ -1532,7 +1942,11 @@
           if (state.isPaintingFog) {
             state.isPaintingFog = false;
             state.lastPaintLatLng = null;
-            saveFogStrokes();
+            if (state.roomId) {
+              roomSync.flushPendingFogBatch();
+            } else {
+              saveFogStrokes();
+            }
           }
         });
 
@@ -1543,7 +1957,7 @@
         });
 
         // =========================================================================
-        // 8. MODALS: CREATE / EDIT MARKER (WITH GROUPS) & TILE SETTINGS
+        // 8. MODALS: CREATE / EDIT MARKER (WITH GROUPS), TILE SETTINGS & ROOMS
         // =========================================================================
         const markerModal = document.getElementById('markerModal');
         const pinTitleInput = document.getElementById('pinTitleInput');
@@ -1624,7 +2038,6 @@
           clearPinGroupBtn.classList.toggle('hidden', !pinGroupInput.value.trim());
           pinNotesInput.value = '';
 
-          // If adding to an existing group, default to that group's category if found
           let defaultCat = 'interior_pending';
           if (state.activeGroupForNewPin) {
             const sample = state.markers.find(m => (m.group || '').trim() === state.activeGroupForNewPin);
@@ -1674,10 +2087,13 @@
                 category: state.selectedModalCategory,
                 notes
               };
+              if (state.roomId) {
+                roomSync.upsertMarker(state.markers[idx]);
+              }
             }
             showToast('Marcador actualizado', 'success');
           } else {
-            state.markers.unshift({
+            const newPin = {
               id: 'pin_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
               lat: state.pendingLatLng.lat,
               lng: state.pendingLatLng.lng,
@@ -1685,8 +2101,13 @@
               group,
               category: state.selectedModalCategory,
               notes,
+              createdTs: Date.now(),
               createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-            });
+            };
+            state.markers.unshift(newPin);
+            if (state.roomId) {
+              roomSync.upsertMarker(newPin);
+            }
             showToast(group ? `Guardado en la rama "${group}"` : 'Marcador guardado con su contexto', 'success');
           }
 
@@ -1696,7 +2117,9 @@
           }
 
           markerModal.classList.add('hidden');
-          saveMarkers();
+          if (!state.roomId) {
+            saveMarkers();
+          }
         });
 
         document.getElementById('closeMarkerModalBtn').addEventListener('click', () => markerModal.classList.add('hidden'));
@@ -1739,6 +2162,54 @@
           updateMapBackgroundTheme();
           tileSettingsModal.classList.add('hidden');
           showToast('Capa de teselas actualizada', 'success');
+        });
+
+        // Online Room Modal Events
+        const roomModal = document.getElementById('roomModal');
+        const roomNameInput = document.getElementById('roomNameInput');
+        const roomSeedLocalCheckbox = document.getElementById('roomSeedLocalCheckbox');
+
+        function openRoomModal() {
+          roomSync.updateRoomUI();
+          roomModal.classList.remove('hidden');
+          if (!state.roomId) {
+            setTimeout(() => roomNameInput.focus(), 50);
+          }
+        }
+
+        document.getElementById('roomStatusBtn').addEventListener('click', openRoomModal);
+        document.getElementById('closeRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
+        document.getElementById('cancelRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
+        document.getElementById('doneRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
+
+        document.getElementById('randomRoomNameBtn').addEventListener('click', () => {
+          const rand = 'leonida-' + Math.random().toString(36).slice(2, 7);
+          roomNameInput.value = rand;
+        });
+
+        document.getElementById('roomJoinForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const joined = await roomSync.joinRoom(roomNameInput.value, roomSeedLocalCheckbox.checked);
+          if (joined) {
+            roomNameInput.value = '';
+          }
+        });
+
+        document.getElementById('copyRoomLinkBtn').addEventListener('click', () => {
+          const inviteInput = document.getElementById('roomInviteLinkInput');
+          inviteInput.select();
+          inviteInput.setSelectionRange(0, 99999);
+          try {
+            document.execCommand('copy');
+            showToast('Enlace de sala copiado al portapapeles', 'success');
+          } catch {
+            showToast('Copia el enlace manualmente con Ctrl+C', 'info');
+          }
+        });
+
+        document.getElementById('leaveRoomBtn').addEventListener('click', () => {
+          roomSync.leaveRoom(true);
+          roomModal.classList.add('hidden');
         });
 
         // =========================================================================
@@ -1832,7 +2303,6 @@
             return;
           }
 
-          // Partition filtered markers into named groups (branches) and ungrouped
           const groupedMap = new Map();
           const ungrouped = [];
           filtered.forEach((m) => {
@@ -1847,7 +2317,6 @@
 
           let html = '';
 
-          // Render Group Branches
           groupedMap.forEach((items, groupName) => {
             const isCollapsed = state.collapsedGroups.has(groupName);
             const isHidden = state.hiddenGroups.has(groupName);
@@ -1891,7 +2360,6 @@
             `;
           });
 
-          // Divider if both grouped and ungrouped markers exist
           if (groupedMap.size > 0 && ungrouped.length > 0) {
             html += `
               <div class="flex items-center gap-2 pt-1 pb-0.5 px-1">
@@ -1901,12 +2369,9 @@
             `;
           }
 
-          // Render Ungrouped Markers
           html += ungrouped.map(m => buildSidebarCardHtml(m)).join('');
-
           list.innerHTML = html;
 
-          // Bind Group Header Events
           list.querySelectorAll('.group-header-toggle').forEach((header) => {
             header.addEventListener('click', () => {
               const g = header.dataset.toggleGroup;
@@ -1964,7 +2429,6 @@
             });
           });
 
-          // Bind Pin Card Events
           list.querySelectorAll('.sidebar-pin-card').forEach((card) => {
             card.addEventListener('click', () => {
               const m = state.markers.find(item => item.id === card.dataset.id);
@@ -2007,7 +2471,7 @@
         map.on('zoom viewreset', updateZoomHudAndLabels);
 
         // =========================================================================
-        // 10. TOOLBAR, SIDEBAR TOGGLE, HIGH-PRECISION SCREENSHOT IMPORTER & HOTKEYS
+        // 10. TOOLBAR, SIDEBAR TOGGLE, BACKUPS & HOTKEYS
         // =========================================================================
         document.querySelectorAll('.tool-btn').forEach((btn) => {
           btn.addEventListener('click', () => setActiveTool(btn.dataset.tool));
@@ -2103,7 +2567,11 @@
               }
               if (Array.isArray(data.markers)) {
                 state.markers = migrateMarkers(data.markers);
-                saveMarkers();
+                if (state.roomId) {
+                  roomSync.replaceAllMarkers(state.markers);
+                } else {
+                  saveMarkers();
+                }
               }
               if (Array.isArray(data.fogStrokes)) {
                 state.fogStrokes = data.fogStrokes;
@@ -2125,6 +2593,7 @@
             if (e.key === 'Escape') {
               markerModal.classList.add('hidden');
               tileSettingsModal.classList.add('hidden');
+              roomModal.classList.add('hidden');
             }
             return;
           }
@@ -2132,6 +2601,7 @@
           if (e.key === 'Escape') {
             markerModal.classList.add('hidden');
             tileSettingsModal.classList.add('hidden');
+            roomModal.classList.add('hidden');
           } else if (e.key === '1') {
             setActiveTool('pan');
           } else if (e.key === '2') {
@@ -2159,30 +2629,36 @@
         setActiveTool('pan');
         updateFogModeUI();
         updateZoomHudAndLabels();
+        roomSync.updateRoomUI();
 
-        if (localStorage.getItem(FOG_STROKES_KEY) === null) {
-          saveFogStrokes();
-        }
-        fogController.setStrokes(state.fogStrokes);
-
-        if (state.markers.length === 0 && !localStorage.getItem('leonida_initialized_v2')) {
-          state.markers = [
-            {
-              id: 'pin_starter_interior',
-              lat: 0.3461,
-              lng: -0.3900,
-              title: 'Ejemplo: Edificio azul accesible',
-              group: '',
-              category: 'interior_pending',
-              notes: 'Usa [3] Descubrir para ir quitando el difuminado conforme exploras.\nActiva "Resaltar Interiores" arriba para distinguir mejor las casas azul oscuro.',
-              createdAt: 'Guía inicial'
-            }
-          ];
-          localStorage.setItem('leonida_initialized_v2', 'true');
-          saveMarkers();
+        const initialUrlRoom = getRoomIdFromUrl();
+        if (initialUrlRoom) {
+          roomSync.joinRoom(initialUrlRoom, false);
         } else {
-          renderMarkersOnMap();
-          renderSidebarMarkers();
+          if (localStorage.getItem(FOG_STROKES_KEY) === null) {
+            saveFogStrokes();
+          }
+          fogController.setStrokes(state.fogStrokes);
+
+          if (state.markers.length === 0 && !localStorage.getItem('leonida_initialized_v2')) {
+            state.markers = [
+              {
+                id: 'pin_starter_interior',
+                lat: 0.3461,
+                lng: -0.3900,
+                title: 'Ejemplo: Edificio azul accesible',
+                group: '',
+                category: 'interior_pending',
+                notes: 'Usa [3] Descubrir para ir quitando el difuminado conforme exploras.\nActiva "Resaltar Interiores" arriba para distinguir mejor las casas azul oscuro.',
+                createdAt: 'Guía inicial'
+              }
+            ];
+            localStorage.setItem('leonida_initialized_v2', 'true');
+            saveMarkers();
+          } else {
+            renderMarkersOnMap();
+            renderSidebarMarkers();
+          }
         }
       } catch (err) {
         console.error('Error al inicializar Leonida Recon HD:', err);
