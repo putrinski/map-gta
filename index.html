@@ -91,7 +91,7 @@
       inset: 0;
       z-index: 410;
       pointer-events: none;
-      transition: backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease, background-color 0.2s ease;
+      transition: backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
       will-change: mask-image, -webkit-mask-image;
     }
     .fog-mode-soft #fogBlurOverlay {
@@ -123,7 +123,7 @@
     .leaflet-popup-content {
       margin: 0 !important;
       min-width: 260px;
-      max-width: 315px;
+      max-width: 320px;
     }
     .leaflet-popup-close-button {
       color: #94a3b8 !important;
@@ -168,31 +168,6 @@
       justify-content: center;
       color: #ffffff;
     }
-    /* Subtle pulsing halo for pending interiors */
-    .pin-pulse-ring {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      width: 32px;
-      height: 32px;
-      border-radius: 9999px;
-      transform: translateX(-50%);
-      background: rgba(245, 158, 11, 0.42);
-      border: 2px solid rgba(245, 158, 11, 0.85);
-      z-index: 1;
-      pointer-events: none;
-      animation: pinPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-    }
-    @keyframes pinPulse {
-      0% {
-        transform: translateX(-50%) scale(0.95);
-        opacity: 0.85;
-      }
-      75%, 100% {
-        transform: translateX(-50%) scale(1.85);
-        opacity: 0;
-      }
-    }
     .custom-pin-label {
       margin-top: 4px;
       background: rgba(15, 23, 42, 0.92);
@@ -203,7 +178,7 @@
       padding: 2px 7px;
       border-radius: 6px;
       white-space: nowrap;
-      max-width: 155px;
+      max-width: 165px;
       overflow: hidden;
       text-overflow: ellipsis;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
@@ -211,6 +186,35 @@
     }
     .hide-pin-labels .custom-pin-label {
       display: none;
+    }
+
+    /* Pending Interior Pulse Ring */
+    @keyframes pendingPulse {
+      0% {
+        transform: translate(-50%, -50%) scale(0.75);
+        opacity: 0.85;
+      }
+      70% {
+        transform: translate(-50%, -50%) scale(1.75);
+        opacity: 0;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.75);
+        opacity: 0;
+      }
+    }
+    .pin-pulse-ring {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      width: 34px;
+      height: 34px;
+      border-radius: 9999px;
+      background: rgba(245, 158, 11, 0.45);
+      border: 2px solid rgba(251, 191, 36, 0.9);
+      pointer-events: none;
+      z-index: 1;
+      animation: pendingPulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
     }
 
     /* Glassmorphism panels */
@@ -305,21 +309,21 @@
           <div class="w-[1px] h-6 bg-white/10 mx-0.5"></div>
 
           <!-- [3] Descubrir (Erase Blur) -->
-          <button data-tool="eraseFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Borrar difuminado para descubrir zona (Tecla 3 · Clic der.: mover mapa)">
+          <button data-tool="eraseFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Borrar difuminado (Tecla 3 · Clic der.: mover mapa)">
             <span>🔦</span>
             <span class="hidden sm:inline">Descubrir</span>
             <kbd class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">3</kbd>
           </button>
 
           <!-- [4] Cubrir (Restore Blur) -->
-          <button data-tool="paintFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Volver a difuminar zona (Tecla 4 · Clic der.: mover mapa)">
+          <button data-tool="paintFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Volver a difuminar (Tecla 4 · Clic der.: mover mapa)">
             <span>🌫️</span>
             <span class="hidden sm:inline">Cubrir</span>
             <kbd class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">4</kbd>
           </button>
         </div>
 
-        <!-- Row 2: Fog Mode, Brush Slider, Contrast, Day/Night, Reset & Settings -->
+        <!-- Row 2: Fog Mode, Brush Slider, Contrast, Day/Night, Reset, Screenshot & Settings -->
         <div class="flex flex-wrap items-center justify-center gap-1.5">
           <!-- Brush Size Slider -->
           <div id="fogControlsGroup" class="hidden items-center gap-2 px-2.5 py-1 rounded-xl bg-black/35 border border-white/10">
@@ -377,8 +381,8 @@
           <span id="hudCoords">Lat: 0.7030, Lng: -0.7030</span>
           <span class="hidden sm:inline text-white/20">|</span>
           <span class="hidden sm:inline text-slate-400 font-sans">Shift+Clic pin rápido</span>
-          <span class="hidden md:inline text-white/20">|</span>
-          <span class="hidden md:inline text-slate-400 font-sans">Clic der.: mover mapa</span>
+          <span id="hudRightPanHint" class="hidden text-white/20">|</span>
+          <span id="hudRightPanText" class="hidden text-cyan-300/90 font-sans">Clic der.: mover mapa</span>
         </div>
       </div>
     </main>
@@ -413,7 +417,7 @@
           <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input id="searchInput" type="text" placeholder="Buscar casa, código, nota..."
+          <input id="searchInput" type="text" placeholder="Buscar casa, grupo, código, nota..."
             class="w-full bg-slatePanel/90 border border-white/10 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-viceCyan transition" />
           <button id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,6 +430,15 @@
         <div id="categoryFilterBar" class="flex flex-wrap gap-1.5"></div>
       </div>
 
+      <!-- Active Group Banner (when adding multiple pins to a branch) -->
+      <div id="activeGroupBanner" class="hidden px-3.5 py-2 bg-cyan-500/15 border-b border-cyan-400/30 flex items-center justify-between gap-2 text-[11px] text-cyan-100">
+        <div class="truncate">
+          <span>📂 Añadiendo a rama: </span>
+          <strong id="activeGroupBannerName" class="text-white"></strong>
+        </div>
+        <button id="clearActiveGroupBtn" type="button" class="text-cyan-300 hover:text-white px-1.5 py-0.5 rounded bg-black/30 shrink-0" title="Dejar de añadir a esta rama">✕</button>
+      </div>
+
       <!-- Marker Stats & Quick Add -->
       <div class="px-4 py-2 bg-slatePanel/40 border-b border-white/5 flex items-center justify-between text-xs text-slate-400">
         <span id="markerCountLabel">0 marcadores guardados</span>
@@ -434,7 +447,7 @@
         </button>
       </div>
 
-      <!-- Markers List -->
+      <!-- Markers List (Grouped Branches + Ungrouped) -->
       <div id="markersList" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
 
       <!-- Footer: Fog Actions & JSON Backup -->
@@ -470,8 +483,8 @@
 
   <!-- Modal: Create / Edit Custom Marker -->
   <div id="markerModal" class="hidden fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="glass-panel w-full max-w-md rounded-2xl border border-white/15 shadow-2xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-cyan-950/50 to-blue-950/50">
+    <div class="glass-panel w-full max-w-md rounded-2xl border border-white/15 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-cyan-950/50 to-blue-950/50 shrink-0">
         <h2 id="markerModalHeading" class="text-sm font-bold text-white flex items-center gap-2">
           <span>📍</span>
           <span>Nuevo Marcador Personalizado</span>
@@ -483,11 +496,27 @@
         </button>
       </div>
 
-      <form id="markerForm" class="p-5 space-y-4">
+      <form id="markerForm" class="p-5 space-y-4 overflow-y-auto">
         <div class="space-y-1.5">
           <label for="pinTitleInput" class="block text-xs font-semibold text-slate-300">Título del lugar *</label>
-          <input id="pinTitleInput" type="text" required placeholder="Ej: Casa azul accesible - Caja fuerte en 2º piso"
+          <input id="pinTitleInput" type="text" required placeholder="Ej: Pista #1 - Nota en el muelle"
             class="w-full bg-slateDark border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-viceCyan transition" />
+        </div>
+
+        <!-- Group / Branch Field -->
+        <div class="space-y-1.5">
+          <label for="pinGroupInput" class="block text-xs font-semibold text-slate-300 flex items-center justify-between">
+            <span>Grupo / Rama <span class="text-slate-500 font-normal">(opcional)</span></span>
+            <span class="text-[10px] text-viceCyan/80 font-normal">Agrupa varias ubicaciones</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs">📂</span>
+            <input id="pinGroupInput" type="text" list="markerGroupsDatalist" placeholder="Ej: Easter Egg OVNI, Cajas Fuertes..."
+              class="w-full bg-slateDark border border-white/15 rounded-xl pl-8 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-viceCyan transition" />
+            <button type="button" id="clearPinGroupBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs" title="Quitar grupo">✕</button>
+            <datalist id="markerGroupsDatalist"></datalist>
+          </div>
+          <div id="quickGroupChips" class="flex flex-wrap gap-1.5 pt-0.5"></div>
         </div>
 
         <div class="space-y-1.5">
@@ -497,7 +526,7 @@
 
         <div class="space-y-1.5">
           <label for="pinNotesInput" class="block text-xs font-semibold text-slate-300">Notas / Contexto (códigos, pistas, qué necesitas)</label>
-          <textarea id="pinNotesInput" rows="4" placeholder="Anota aquí todo el contexto: código del panel 4815, entrada trasera por el callejón, volver de noche..."
+          <textarea id="pinNotesInput" rows="3" placeholder="Anota aquí todo el contexto: código del panel 4815, entrada trasera por el callejón, volver de noche..."
             class="w-full bg-slateDark border border-white/15 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-viceCyan transition leading-relaxed"></textarea>
         </div>
 
@@ -603,7 +632,9 @@
 
   <script>
     /**
-     * LEONIDA RECON HD — Single TileLayer + Backdrop-Filter Gaussian Fog Mask + Custom Context Pins
+     * LEONIDA RECON HD — Single TileLayer + Backdrop-Filter Gaussian Fog Mask
+     * + Pending/Completed Interior Tracking + Marker Groups / Branches
+     * + Right-Click Pan in Paint Mode
      */
     window.addEventListener('DOMContentLoaded', () => {
       try {
@@ -630,7 +661,7 @@
             color: '#f59e0b',
             bg: 'rgba(245,158,11,0.22)',
             pulse: true,
-            svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1v-9.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v4m0 3h.01"/></svg>'
+            svg: '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1v-9.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 3h.01"/></svg>'
           },
           {
             id: 'interior_done',
@@ -639,15 +670,14 @@
             color: '#10b981',
             bg: 'rgba(16,185,129,0.22)',
             pulse: false,
-            svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1v-9.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l2 2 4-4"/></svg>'
+            svg: '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1v-9.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l2 2 4-4"/></svg>'
           },
           {
             id: 'puzzle',
             name: 'Puzle / Código',
             shortName: 'Puzle',
             color: '#eab308',
-            bg: 'rgba(234,179,8,0.22)',
-            pulse: false,
+            bg: 'rgba(234,179,8,0.20)',
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path stroke-linecap="round" d="M8 11V7a4 4 0 118 0v4"/></svg>'
           },
           {
@@ -656,7 +686,6 @@
             shortName: 'Botín',
             color: '#14b8a6',
             bg: 'rgba(20,184,166,0.22)',
-            pulse: false,
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg>'
           },
           {
@@ -665,7 +694,6 @@
             shortName: 'Misterio',
             color: '#8b5cf6',
             bg: 'rgba(139,92,246,0.22)',
-            pulse: false,
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3m.08 4h.01M12 22a10 10 0 100-20 10 10 0 000 20z"/></svg>'
           },
           {
@@ -674,7 +702,6 @@
             shortName: 'Vehículo',
             color: '#06b6d4',
             bg: 'rgba(6,182,212,0.22)',
-            pulse: false,
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l1.5-4.5A2 2 0 018.4 7h7.2a2 2 0 011.9 1.5L19 13m-14 0h14v5a1 1 0 01-1 1h-1a1 1 0 01-1-1v-1H8v1a1 1 0 01-1 1H6a1 1 0 01-1-1v-5z"/></svg>'
           },
           {
@@ -683,7 +710,6 @@
             shortName: 'Peligro',
             color: '#ef4444',
             bg: 'rgba(239,68,68,0.22)',
-            pulse: false,
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>'
           },
           {
@@ -692,7 +718,6 @@
             shortName: 'Nota',
             color: '#64748b',
             bg: 'rgba(100,116,139,0.22)',
-            pulse: false,
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6-5.33-6-10a6 6 0 1112 0c0 4.67-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>'
           },
         ];
@@ -714,23 +739,17 @@
         }
 
         function migrateMarkers(markers) {
-          if (!Array.isArray(markers)) return [];
-          let migrated = false;
-          const result = markers.map((m) => {
-            if (m && m.category === 'interior') {
-              migrated = true;
-              return { ...m, category: 'interior_pending' };
+          return markers.map((m) => {
+            if (!m) return m;
+            const next = { ...m };
+            if (next.category === 'interior') {
+              next.category = 'interior_pending';
             }
-            return m;
+            if (typeof next.group !== 'string') {
+              next.group = '';
+            }
+            return next;
           });
-          if (migrated) {
-            try {
-              localStorage.setItem(PINS_STORAGE_KEY, JSON.stringify(result));
-            } catch {
-              // Ignore storage quota errors during migration
-            }
-          }
-          return result;
         }
 
         function showToast(message, type = 'info') {
@@ -751,7 +770,7 @@
           setTimeout(() => {
             toast.classList.add('opacity-0', 'translate-y-2');
             setTimeout(() => toast.remove(), 300);
-          }, 2600);
+          }, 2800);
         }
 
         function showConfirm(title, message) {
@@ -803,10 +822,16 @@
           pendingLatLng: null,
           selectedModalCategory: 'interior_pending',
 
+          // Marker Groups / Branches UI State
+          collapsedGroups: new Set(),
+          hiddenGroups: new Set(),
+          linkedGroups: new Set(),
+          activeGroupForNewPin: '',
+
           isPaintingFog: false,
           lastPaintLatLng: null,
           isRightClickPanning: false,
-          lastPanClient: null,
+          lastRightPanClient: null,
         };
 
         function saveFogStrokes() {
@@ -1129,13 +1154,19 @@
         document.getElementById('modalRevealAllFogBtn').addEventListener('click', handleRevealAllFog);
 
         // =========================================================================
-        // 6. CUSTOM CONTEXT MARKERS (LEAFLET LAYER GROUP)
+        // 6. CUSTOM CONTEXT MARKERS + GROUPS / BRANCHES + ROUTE LINES
         // =========================================================================
+        const groupLinesLayer = L.layerGroup().addTo(map);
         const markersLayer = L.layerGroup().addTo(map);
         const markerInstances = new Map();
 
-        function getCategoryMeta(catId) {
-          return CATEGORIES.find(c => c.id === catId) || CATEGORIES[CATEGORIES.length - 1];
+        function getUniqueGroups() {
+          const groups = new Set();
+          state.markers.forEach((m) => {
+            const g = (m.group || '').trim();
+            if (g) groups.add(g);
+          });
+          return Array.from(groups).sort((a, b) => a.localeCompare(b, 'es'));
         }
 
         function saveMarkers() {
@@ -1150,7 +1181,8 @@
             const catOk = state.selectedFilter === 'all' || m.category === state.selectedFilter;
             const textOk = !q ||
               m.title.toLowerCase().includes(q) ||
-              (m.notes && m.notes.toLowerCase().includes(q));
+              (m.notes && m.notes.toLowerCase().includes(q)) ||
+              (m.group && m.group.toLowerCase().includes(q));
             return catOk && textOk;
           });
         }
@@ -1163,13 +1195,62 @@
             .replace(/"/g, '&quot;');
         }
 
+        function getCategoryById(id) {
+          return CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+        }
+
+        function fitGroupOnMap(groupName) {
+          const items = state.markers.filter(m => (m.group || '').trim() === groupName);
+          if (items.length === 0) return;
+
+          if (state.hiddenGroups.has(groupName)) {
+            state.hiddenGroups.delete(groupName);
+            renderMarkersOnMap();
+            renderSidebarMarkers();
+          }
+
+          if (items.length === 1) {
+            map.flyTo([items[0].lat, items[0].lng], Math.max(map.getZoom(), 16), { duration: 0.7 });
+            return;
+          }
+          const bounds = L.latLngBounds(items.map(m => [m.lat, m.lng]));
+          map.flyToBounds(bounds, { padding: [70, 70], maxZoom: 16, duration: 0.75 });
+        }
+
+        function setActiveGroupForNewPin(groupName) {
+          state.activeGroupForNewPin = (groupName || '').trim();
+          const banner = document.getElementById('activeGroupBanner');
+          const nameEl = document.getElementById('activeGroupBannerName');
+          if (state.activeGroupForNewPin) {
+            nameEl.textContent = state.activeGroupForNewPin;
+            banner.classList.remove('hidden');
+          } else {
+            banner.classList.add('hidden');
+          }
+        }
+
+        document.getElementById('clearActiveGroupBtn').addEventListener('click', () => {
+          setActiveGroupForNewPin('');
+        });
+
         function renderMarkersOnMap() {
           markersLayer.clearLayers();
+          groupLinesLayer.clearLayers();
           markerInstances.clear();
 
           const filtered = getFilteredMarkers();
+          const visibleByGroup = new Map();
+
           filtered.forEach((m) => {
-            const cat = getCategoryMeta(m.category);
+            const grp = (m.group || '').trim();
+            if (grp && state.hiddenGroups.has(grp)) return;
+
+            if (grp) {
+              if (!visibleByGroup.has(grp)) visibleByGroup.set(grp, []);
+              visibleByGroup.get(grp).push(m);
+            }
+
+            const cat = getCategoryById(m.category);
             const pulseHtml = cat.pulse ? '<span class="pin-pulse-ring"></span>' : '';
 
             const icon = L.divIcon({
@@ -1178,7 +1259,7 @@
               iconAnchor: [0, 0],
               popupAnchor: [0, -34],
               html: `
-                <div class="custom-pin-wrapper" title="${escapeHtml(m.title)}">
+                <div class="custom-pin-wrapper" title="${escapeHtml(m.title)}${grp ? ' [' + escapeHtml(grp) + ']' : ''}">
                   ${pulseHtml}
                   <div class="custom-pin-head" style="background:${cat.color}">
                     <span class="custom-pin-emoji">${cat.svg}</span>
@@ -1190,30 +1271,40 @@
 
             const leafletMarker = L.marker([m.lat, m.lng], { icon });
 
-            let statusActionHtml = '';
+            let statusActionBtn = '';
             if (m.category === 'interior_pending') {
-              statusActionHtml = `
-                <button onclick="window.toggleInteriorStatus('${m.id}')"
-                  class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition">
+              statusActionBtn = `
+                <button onclick="window.toggleInteriorStatusById('${m.id}')"
+                  class="w-full px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition flex items-center justify-center gap-1.5">
                   <span>✅ Marcar como Completado</span>
                 </button>
               `;
             } else if (m.category === 'interior_done') {
-              statusActionHtml = `
-                <button onclick="window.toggleInteriorStatus('${m.id}')"
-                  class="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-xs font-semibold text-amber-200 transition">
-                  <span>⚠️ Reabrir Pendiente</span>
+              statusActionBtn = `
+                <button onclick="window.toggleInteriorStatusById('${m.id}')"
+                  class="w-full px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-xs font-semibold text-amber-200 transition flex items-center justify-center gap-1.5">
+                  <span>⚠️ Reabrir como Pendiente</span>
                 </button>
               `;
             }
 
+            const groupBadgeHtml = grp ? `
+              <button onclick="window.fitMarkerGroupById('${m.id}')"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/35 text-[10px] font-semibold text-cyan-200 transition max-w-full truncate"
+                title="Centrar el mapa en todos los marcadores de esta rama">
+                <span>📂</span>
+                <span class="truncate">${escapeHtml(grp)}</span>
+              </button>
+            ` : '';
+
             const popupHtml = `
               <div class="p-4 space-y-3">
-                <div class="flex items-center justify-between pr-5">
+                <div class="flex flex-wrap items-center gap-1.5 pr-5">
                   <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold"
                     style="background:${cat.bg}; color:${cat.color}; border:1px solid ${cat.color}">
                     ${cat.svg} ${cat.name}
                   </span>
+                  ${groupBadgeHtml}
                 </div>
                 <div>
                   <h3 class="text-sm font-bold text-white leading-snug">${escapeHtml(m.title)}</h3>
@@ -1224,7 +1315,7 @@
                     m.notes && m.notes.trim() ? escapeHtml(m.notes) : '<span class="text-slate-500 italic">Sin notas adicionales</span>'
                   }</p>
                 </div>
-                ${statusActionHtml}
+                ${statusActionBtn}
                 <div class="pt-1 flex items-center justify-between gap-2">
                   <button onclick="window.deletePinById('${m.id}')"
                     class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-[11px] font-semibold text-rose-300 transition">
@@ -1242,23 +1333,45 @@
             leafletMarker.addTo(markersLayer);
             markerInstances.set(m.id, leafletMarker);
           });
+
+          // Draw dashed connecting lines for any group with link mode enabled
+          state.linkedGroups.forEach((grp) => {
+            if (state.hiddenGroups.has(grp)) return;
+            const list = visibleByGroup.get(grp);
+            if (!list || list.length < 2) return;
+            const latlngs = [...list].reverse().map(m => [m.lat, m.lng]);
+            const catColor = getCategoryById(list[0].category).color || '#06b6d4';
+            L.polyline(latlngs, {
+              color: catColor,
+              weight: 3,
+              opacity: 0.85,
+              dashArray: '8, 8',
+              interactive: false
+            }).addTo(groupLinesLayer);
+          });
         }
 
-        window.toggleInteriorStatus = (id) => {
+        window.fitMarkerGroupById = (id) => {
+          const m = state.markers.find(item => item.id === id);
+          if (!m || !m.group) return;
+          map.closePopup();
+          fitGroupOnMap(m.group.trim());
+        };
+
+        window.toggleInteriorStatusById = (id) => {
           const idx = state.markers.findIndex(item => item.id === id);
           if (idx === -1) return;
-          const current = state.markers[idx];
-          if (current.category === 'interior_pending') {
-            state.markers[idx] = { ...current, category: 'interior_done' };
-            showToast('Interior marcado como Completado ✅', 'success');
-          } else if (current.category === 'interior_done') {
-            state.markers[idx] = { ...current, category: 'interior_pending' };
-            showToast('Interior reabierto como Pendiente ⚠️', 'info');
-          } else {
-            return;
-          }
+          const curr = state.markers[idx];
+          const nextCat = curr.category === 'interior_pending' ? 'interior_done' : 'interior_pending';
+          state.markers[idx] = { ...curr, category: nextCat };
           map.closePopup();
           saveMarkers();
+          showToast(
+            nextCat === 'interior_done'
+              ? '✅ Interior marcado como completado'
+              : '⚠️ Interior reabierto como pendiente',
+            'success'
+          );
         };
 
         window.editPinById = (id) => {
@@ -1280,16 +1393,18 @@
         };
 
         // =========================================================================
-        // 7. TOOL MODES & POINTER INTERACTIONS ON MAP
+        // 7. TOOL MODES, RIGHT-CLICK PAN IN PAINT MODE & POINTER INTERACTIONS
         // =========================================================================
         const fogControlsGroup = document.getElementById('fogControlsGroup');
+        const hudRightPanHint = document.getElementById('hudRightPanHint');
+        const hudRightPanText = document.getElementById('hudRightPanText');
 
         function setActiveTool(tool) {
           state.tool = tool;
           state.isPaintingFog = false;
-          state.lastPaintLatLng = null;
           state.isRightClickPanning = false;
-          state.lastPanClient = null;
+          state.lastPaintLatLng = null;
+          state.lastRightPanClient = null;
 
           document.querySelectorAll('.tool-btn').forEach((btn) => {
             const active = btn.dataset.tool === tool;
@@ -1310,10 +1425,13 @@
           });
 
           const isFogTool = tool === 'eraseFog' || tool === 'paintFog';
-          if (fogControlsGroup) {
-            fogControlsGroup.classList.toggle('hidden', !isFogTool);
-            fogControlsGroup.classList.toggle('flex', isFogTool);
-          }
+          fogControlsGroup.classList.toggle('hidden', !isFogTool);
+          fogControlsGroup.classList.toggle('flex', isFogTool);
+
+          hudRightPanHint.classList.toggle('hidden', !isFogTool);
+          hudRightPanText.classList.toggle('hidden', !isFogTool);
+          hudRightPanHint.classList.toggle('sm:inline', isFogTool);
+          hudRightPanText.classList.toggle('sm:inline', isFogTool);
 
           if (isFogTool) {
             map.dragging.disable();
@@ -1327,8 +1445,9 @@
           }
         }
 
+        // Prevent context menu while in paint tools so right-click can pan cleanly
         mapWorkspace.addEventListener('contextmenu', (e) => {
-          if (state.tool === 'eraseFog' || state.tool === 'paintFog' || state.isRightClickPanning) {
+          if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
             e.preventDefault();
           }
         });
@@ -1341,7 +1460,12 @@
 
           document.getElementById('hudCoords').textContent = `Lat: ${latlng.lat.toFixed(4)}, Lng: ${latlng.lng.toFixed(4)}`;
 
-          if (state.isRightClickPanning) {
+          // Right-click panning while in paint mode
+          if (state.isRightClickPanning && state.lastRightPanClient) {
+            const dx = state.lastRightPanClient.x - e.clientX;
+            const dy = state.lastRightPanClient.y - e.clientY;
+            state.lastRightPanClient = { x: e.clientX, y: e.clientY };
+            map.panBy([dx, dy], { animate: false });
             return;
           }
 
@@ -1360,18 +1484,6 @@
           }
         });
 
-        window.addEventListener('pointermove', (e) => {
-          if (state.isRightClickPanning && state.lastPanClient) {
-            const dx = e.clientX - state.lastPanClient.x;
-            const dy = e.clientY - state.lastPanClient.y;
-            if (dx !== 0 || dy !== 0) {
-              map.panBy([-dx, -dy], { animate: false });
-              state.lastPanClient = { x: e.clientX, y: e.clientY };
-              fogController.scheduleRedraw();
-            }
-          }
-        });
-
         mapWorkspace.addEventListener('pointerleave', () => {
           brushCursorRing.classList.add('hidden');
         });
@@ -1381,16 +1493,21 @@
             return;
           }
 
-          if ((state.tool === 'eraseFog' || state.tool === 'paintFog') && e.button === 2) {
+          const isFogTool = state.tool === 'eraseFog' || state.tool === 'paintFog';
+          if (!isFogTool) return;
+
+          // Right click -> pan map smoothly
+          if (e.button === 2) {
             e.preventDefault();
             state.isRightClickPanning = true;
-            state.lastPanClient = { x: e.clientX, y: e.clientY };
+            state.lastRightPanClient = { x: e.clientX, y: e.clientY };
             brushCursorRing.classList.add('hidden');
             document.getElementById('map').style.cursor = 'grabbing';
             return;
           }
 
-          if ((state.tool === 'eraseFog' || state.tool === 'paintFog') && e.button === 0 && !state.isRightClickPanning) {
+          // Left click -> paint or erase fog
+          if (e.button === 0) {
             const rect = map.getContainer().getBoundingClientRect();
             const latlng = map.containerPointToLatLng([e.clientX - rect.left, e.clientY - rect.top]);
             const mode = state.tool === 'eraseFog' ? 'erase' : 'paint';
@@ -1401,23 +1518,23 @@
           }
         });
 
-        function endPointerInteractions() {
+        window.addEventListener('pointerup', (e) => {
+          if (state.isRightClickPanning) {
+            state.isRightClickPanning = false;
+            state.lastRightPanClient = null;
+            if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
+              document.getElementById('map').style.cursor = 'none';
+              brushCursorRing.classList.remove('hidden');
+              brushCursorRing.style.left = e.clientX + 'px';
+              brushCursorRing.style.top = e.clientY + 'px';
+            }
+          }
           if (state.isPaintingFog) {
             state.isPaintingFog = false;
             state.lastPaintLatLng = null;
             saveFogStrokes();
           }
-          if (state.isRightClickPanning) {
-            state.isRightClickPanning = false;
-            state.lastPanClient = null;
-            if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
-              document.getElementById('map').style.cursor = 'none';
-            }
-          }
-        }
-
-        window.addEventListener('pointerup', endPointerInteractions);
-        window.addEventListener('pointercancel', endPointerInteractions);
+        });
 
         map.on('click', (e) => {
           if (state.tool === 'pin' || e.originalEvent.shiftKey) {
@@ -1426,12 +1543,50 @@
         });
 
         // =========================================================================
-        // 8. MODALS: CREATE / EDIT MARKER & TILE SETTINGS
+        // 8. MODALS: CREATE / EDIT MARKER (WITH GROUPS) & TILE SETTINGS
         // =========================================================================
         const markerModal = document.getElementById('markerModal');
         const pinTitleInput = document.getElementById('pinTitleInput');
+        const pinGroupInput = document.getElementById('pinGroupInput');
+        const clearPinGroupBtn = document.getElementById('clearPinGroupBtn');
+        const markerGroupsDatalist = document.getElementById('markerGroupsDatalist');
+        const quickGroupChips = document.getElementById('quickGroupChips');
         const pinNotesInput = document.getElementById('pinNotesInput');
         const modalCategoryGrid = document.getElementById('modalCategoryGrid');
+
+        function refreshModalGroupSuggestions() {
+          const groups = getUniqueGroups();
+          markerGroupsDatalist.innerHTML = groups.map(g => `<option value="${escapeHtml(g)}"></option>`).join('');
+
+          if (groups.length === 0) {
+            quickGroupChips.innerHTML = '';
+            return;
+          }
+
+          quickGroupChips.innerHTML = groups.map((g) => `
+            <button type="button" data-quick-group="${escapeHtml(g)}"
+              class="quick-group-chip px-2 py-0.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-400/40 text-[10px] text-slate-300 hover:text-cyan-200 transition truncate max-w-[160px]">
+              📂 ${escapeHtml(g)}
+            </button>
+          `).join('');
+
+          quickGroupChips.querySelectorAll('.quick-group-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+              pinGroupInput.value = chip.dataset.quickGroup;
+              clearPinGroupBtn.classList.remove('hidden');
+            });
+          });
+        }
+
+        pinGroupInput.addEventListener('input', () => {
+          clearPinGroupBtn.classList.toggle('hidden', !pinGroupInput.value.trim());
+        });
+
+        clearPinGroupBtn.addEventListener('click', () => {
+          pinGroupInput.value = '';
+          clearPinGroupBtn.classList.add('hidden');
+          pinGroupInput.focus();
+        });
 
         function renderModalCategories() {
           modalCategoryGrid.innerHTML = CATEGORIES.map((c) => `
@@ -1465,8 +1620,19 @@
           state.pendingLatLng = latlng;
           document.getElementById('markerModalHeading').innerHTML = `<span>📍</span><span>Nuevo Marcador Personalizado</span>`;
           pinTitleInput.value = '';
+          pinGroupInput.value = state.activeGroupForNewPin || '';
+          clearPinGroupBtn.classList.toggle('hidden', !pinGroupInput.value.trim());
           pinNotesInput.value = '';
-          selectModalCategory('interior_pending');
+
+          // If adding to an existing group, default to that group's category if found
+          let defaultCat = 'interior_pending';
+          if (state.activeGroupForNewPin) {
+            const sample = state.markers.find(m => (m.group || '').trim() === state.activeGroupForNewPin);
+            if (sample) defaultCat = sample.category;
+          }
+          selectModalCategory(defaultCat);
+          refreshModalGroupSuggestions();
+
           document.getElementById('modalLatLngLabel').textContent = `Lat: ${latlng.lat.toFixed(5)}, Lng: ${latlng.lng.toFixed(5)}`;
           document.getElementById('modalTimestampLabel').textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
           markerModal.classList.remove('hidden');
@@ -1478,8 +1644,12 @@
           state.pendingLatLng = { lat: marker.lat, lng: marker.lng };
           document.getElementById('markerModalHeading').innerHTML = `<span>✏️</span><span>Editar Marcador</span>`;
           pinTitleInput.value = marker.title;
+          pinGroupInput.value = marker.group || '';
+          clearPinGroupBtn.classList.toggle('hidden', !pinGroupInput.value.trim());
           pinNotesInput.value = marker.notes || '';
           selectModalCategory(marker.category);
+          refreshModalGroupSuggestions();
+
           document.getElementById('modalLatLngLabel').textContent = `Lat: ${marker.lat.toFixed(5)}, Lng: ${marker.lng.toFixed(5)}`;
           document.getElementById('modalTimestampLabel').textContent = marker.createdAt || '';
           markerModal.classList.remove('hidden');
@@ -1491,6 +1661,7 @@
           const title = pinTitleInput.value.trim();
           if (!title) return;
 
+          const group = pinGroupInput.value.trim();
           const notes = pinNotesInput.value.trim();
 
           if (state.editingMarkerId) {
@@ -1499,6 +1670,7 @@
               state.markers[idx] = {
                 ...state.markers[idx],
                 title,
+                group,
                 category: state.selectedModalCategory,
                 notes
               };
@@ -1510,11 +1682,17 @@
               lat: state.pendingLatLng.lat,
               lng: state.pendingLatLng.lng,
               title,
+              group,
               category: state.selectedModalCategory,
               notes,
               createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
             });
-            showToast('Marcador guardado con su contexto', 'success');
+            showToast(group ? `Guardado en la rama "${group}"` : 'Marcador guardado con su contexto', 'success');
+          }
+
+          if (group) {
+            state.collapsedGroups.delete(group);
+            state.hiddenGroups.delete(group);
           }
 
           markerModal.classList.add('hidden');
@@ -1564,7 +1742,7 @@
         });
 
         // =========================================================================
-        // 9. RIGHT SIDEBAR: FILTERS, LIST, QUICK COMPLETE & DIRECT DELETE
+        // 9. RIGHT SIDEBAR: FILTERS, GROUPED BRANCHES, QUICK COMPLETE & DELETE
         // =========================================================================
         function renderCategoryFilters() {
           const bar = document.getElementById('categoryFilterBar');
@@ -1602,12 +1780,44 @@
           });
         }
 
+        function buildSidebarCardHtml(m) {
+          const cat = getCategoryById(m.category);
+          const snippet = m.notes && m.notes.trim() ? m.notes.trim() : 'Sin notas adicionales...';
+          const quickCompleteBtn = m.category === 'interior_pending'
+            ? `<button type="button" data-complete-id="${m.id}" class="sidebar-complete-btn px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-400/35 text-[10px] font-bold text-emerald-200 transition" title="Marcar interior como completado">✅ Completar</button>`
+            : '';
+
+          return `
+            <div data-id="${m.id}" class="sidebar-pin-card group cursor-pointer p-3 rounded-xl bg-slatePanel/80 hover:bg-slatePanel border border-white/5 hover:border-viceCyan/40 transition space-y-1.5">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background:${cat.bg}; color:${cat.color}; border:1px solid ${cat.color}">
+                    ${cat.svg}
+                  </span>
+                  <h4 class="text-xs font-bold text-white truncate group-hover:text-viceCyan transition">${escapeHtml(m.title)}</h4>
+                </div>
+                <button type="button" data-delete-id="${m.id}" class="sidebar-delete-btn p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/15 transition shrink-0" title="Eliminar marcador">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed pl-8">${escapeHtml(snippet)}</p>
+              <div class="flex items-center justify-between pl-8 pt-0.5">
+                <span class="text-[10px] font-mono text-slate-500">${m.lat.toFixed(2)}, ${m.lng.toFixed(2)}</span>
+                ${quickCompleteBtn}
+              </div>
+            </div>
+          `;
+        }
+
         function renderSidebarMarkers() {
           const list = document.getElementById('markersList');
           const countLabel = document.getElementById('markerCountLabel');
           const filtered = getFilteredMarkers();
 
-          countLabel.textContent = `${state.markers.length} ${state.markers.length === 1 ? 'marcador guardado' : 'marcadores guardados'}`;
+          const totalGroups = getUniqueGroups().length;
+          countLabel.textContent = `${state.markers.length} ${state.markers.length === 1 ? 'marcador' : 'marcadores'}${totalGroups > 0 ? ` · ${totalGroups} ${totalGroups === 1 ? 'rama' : 'ramas'}` : ''}`;
 
           if (filtered.length === 0) {
             list.innerHTML = `
@@ -1615,96 +1825,175 @@
                 <div class="text-2xl">📍</div>
                 <p class="text-xs font-semibold text-slate-300">No hay marcadores aquí</p>
                 <p class="text-[11px] text-slate-400 leading-relaxed">
-                  Pulsa <span class="text-viceCyan font-semibold">"Nuevo Pin"</span> (o haz <kbd class="px-1 py-0.5 bg-white/10 rounded">Shift+Clic</kbd>) sobre cualquier casa azul accesible para guardar su contexto.
+                  Pulsa <span class="text-viceCyan font-semibold">"Nuevo Pin"</span> (o haz <kbd class="px-1 py-0.5 bg-white/10 rounded">Shift+Clic</kbd>) sobre cualquier zona para guardar su contexto o agruparlo en una rama.
                 </p>
               </div>
             `;
             return;
           }
 
-          list.innerHTML = filtered.map((m) => {
-            const cat = getCategoryMeta(m.category);
-            const snippet = m.notes && m.notes.trim() ? m.notes.trim() : 'Sin notas adicionales...';
-
-            // Quick status toggle row for interior categories
-            let footerActionHtml = '';
-            if (m.category === 'interior_pending') {
-              footerActionHtml = `
-                <div class="pt-1.5 pl-8 flex items-center justify-between gap-2">
-                  <span class="text-[10px] font-semibold text-amber-400/90">Pendiente de volver</span>
-                  <button type="button" data-id="${m.id}"
-                    class="sidebar-toggle-interior-btn inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-[10px] font-bold text-emerald-300 transition"
-                    title="Marcar este interior como completado">
-                    <span>✅ Completar</span>
-                  </button>
-                </div>
-              `;
-            } else if (m.category === 'interior_done') {
-              footerActionHtml = `
-                <div class="pt-1.5 pl-8 flex items-center justify-between gap-2">
-                  <span class="text-[10px] font-semibold text-emerald-400/90">Interior completado</span>
-                  <button type="button" data-id="${m.id}"
-                    class="sidebar-toggle-interior-btn inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 text-[10px] font-semibold text-amber-300 transition"
-                    title="Volver a marcar como pendiente">
-                    <span>⚠️ Reabrir</span>
-                  </button>
-                </div>
-              `;
+          // Partition filtered markers into named groups (branches) and ungrouped
+          const groupedMap = new Map();
+          const ungrouped = [];
+          filtered.forEach((m) => {
+            const g = (m.group || '').trim();
+            if (g) {
+              if (!groupedMap.has(g)) groupedMap.set(g, []);
+              groupedMap.get(g).push(m);
+            } else {
+              ungrouped.push(m);
             }
+          });
 
-            return `
-              <div data-id="${m.id}" class="sidebar-pin-card group cursor-pointer p-3 rounded-xl bg-slatePanel/80 hover:bg-slatePanel border border-white/5 hover:border-viceCyan/40 transition space-y-1.5">
-                <div class="flex items-start justify-between gap-2">
+          let html = '';
+
+          // Render Group Branches
+          groupedMap.forEach((items, groupName) => {
+            const isCollapsed = state.collapsedGroups.has(groupName);
+            const isHidden = state.hiddenGroups.has(groupName);
+            const isLinked = state.linkedGroups.has(groupName);
+            const safeGroupAttr = escapeHtml(groupName);
+
+            html += `
+              <div class="rounded-2xl bg-slateDark/65 border border-white/10 overflow-hidden ${isHidden ? 'opacity-60' : ''}">
+                <div data-toggle-group="${safeGroupAttr}" class="group-header-toggle cursor-pointer px-3 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] flex items-center justify-between gap-2 transition">
                   <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style="background:${cat.bg}; color:${cat.color}; border:1px solid ${cat.color}">
-                      ${cat.svg}
-                    </span>
-                    <h4 class="text-xs font-bold text-white truncate group-hover:text-viceCyan transition">${escapeHtml(m.title)}</h4>
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isCollapsed ? '-rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span class="text-xs shrink-0">📂</span>
+                    <span class="text-xs font-bold text-cyan-100 truncate" title="${safeGroupAttr}">${safeGroupAttr}</span>
+                    <span class="px-1.5 py-0.5 rounded-md bg-viceCyan/15 text-viceCyan text-[10px] font-mono font-bold shrink-0">${items.length}</span>
                   </div>
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <span class="text-[10px] font-mono text-slate-500">${m.lat.toFixed(2)},${m.lng.toFixed(2)}</span>
-                    <button type="button" data-id="${m.id}"
-                      class="sidebar-delete-btn p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition"
-                      title="Eliminar marcador"
-                      aria-label="Eliminar marcador">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button type="button" data-add-group="${safeGroupAttr}" class="group-add-btn p-1 rounded-lg text-slate-400 hover:text-viceCyan hover:bg-viceCyan/15 transition text-xs font-bold" title="Añadir nuevo pin a esta rama">
+                      +
+                    </button>
+                    <button type="button" data-link-group="${safeGroupAttr}" class="group-link-btn p-1 rounded-lg transition text-[11px] ${isLinked ? 'bg-viceCyan/25 text-viceCyan' : 'text-slate-400 hover:text-white hover:bg-white/10'}" title="${isLinked ? 'Ocultar líneas entre ubicaciones' : 'Conectar ubicaciones con línea en el mapa'}">
+                      🔗
+                    </button>
+                    <button type="button" data-fit-group="${safeGroupAttr}" class="group-fit-btn p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition text-[11px]" title="Centrar mapa en toda esta rama">
+                      🎯
+                    </button>
+                    <button type="button" data-hide-group="${safeGroupAttr}" class="group-hide-btn p-1 rounded-lg transition text-[11px] ${isHidden ? 'bg-rose-500/20 text-rose-300' : 'text-slate-400 hover:text-white hover:bg-white/10'}" title="${isHidden ? 'Mostrar esta rama en el mapa' : 'Ocultar esta rama en el mapa'}">
+                      ${isHidden ? '🙈' : '👁️'}
                     </button>
                   </div>
                 </div>
-                <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed pl-8">${escapeHtml(snippet)}</p>
-                ${footerActionHtml}
+                ${isCollapsed ? '' : `
+                  <div class="p-2 pl-3">
+                    <div class="pl-2.5 border-l-2 border-viceCyan/35 space-y-2">
+                      ${items.map(m => buildSidebarCardHtml(m)).join('')}
+                    </div>
+                  </div>
+                `}
               </div>
             `;
-          }).join('');
+          });
 
-          // Direct delete button inside each sidebar card (stops card click propagation)
-          list.querySelectorAll('.sidebar-delete-btn').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              window.deletePinById(btn.dataset.id);
+          // Divider if both grouped and ungrouped markers exist
+          if (groupedMap.size > 0 && ungrouped.length > 0) {
+            html += `
+              <div class="flex items-center gap-2 pt-1 pb-0.5 px-1">
+                <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Sin grupo (${ungrouped.length})</span>
+                <div class="flex-1 h-[1px] bg-white/10"></div>
+              </div>
+            `;
+          }
+
+          // Render Ungrouped Markers
+          html += ungrouped.map(m => buildSidebarCardHtml(m)).join('');
+
+          list.innerHTML = html;
+
+          // Bind Group Header Events
+          list.querySelectorAll('.group-header-toggle').forEach((header) => {
+            header.addEventListener('click', () => {
+              const g = header.dataset.toggleGroup;
+              if (state.collapsedGroups.has(g)) {
+                state.collapsedGroups.delete(g);
+              } else {
+                state.collapsedGroups.add(g);
+              }
+              renderSidebarMarkers();
             });
           });
 
-          // Quick toggle status button for interior cards (stops card click propagation)
-          list.querySelectorAll('.sidebar-toggle-interior-btn').forEach((btn) => {
+          list.querySelectorAll('.group-add-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
               e.stopPropagation();
-              window.toggleInteriorStatus(btn.dataset.id);
+              const g = btn.dataset.addGroup;
+              setActiveGroupForNewPin(g);
+              setActiveTool('pin');
+              showToast(`Haz clic en el mapa para añadir otro pin a "${g}"`, 'info');
             });
           });
 
-          // Clicking the card flies to the pin and opens its popup
+          list.querySelectorAll('.group-link-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const g = btn.dataset.linkGroup;
+              if (state.linkedGroups.has(g)) {
+                state.linkedGroups.delete(g);
+              } else {
+                state.linkedGroups.add(g);
+              }
+              renderMarkersOnMap();
+              renderSidebarMarkers();
+            });
+          });
+
+          list.querySelectorAll('.group-fit-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              fitGroupOnMap(btn.dataset.fitGroup);
+            });
+          });
+
+          list.querySelectorAll('.group-hide-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const g = btn.dataset.hideGroup;
+              if (state.hiddenGroups.has(g)) {
+                state.hiddenGroups.delete(g);
+              } else {
+                state.hiddenGroups.add(g);
+              }
+              renderMarkersOnMap();
+              renderSidebarMarkers();
+            });
+          });
+
+          // Bind Pin Card Events
           list.querySelectorAll('.sidebar-pin-card').forEach((card) => {
             card.addEventListener('click', () => {
               const m = state.markers.find(item => item.id === card.dataset.id);
               if (!m) return;
+              const grp = (m.group || '').trim();
+              if (grp && state.hiddenGroups.has(grp)) {
+                state.hiddenGroups.delete(grp);
+                renderMarkersOnMap();
+                renderSidebarMarkers();
+              }
               map.flyTo([m.lat, m.lng], Math.max(map.getZoom(), 16), { duration: 0.7 });
               setTimeout(() => {
                 const inst = markerInstances.get(m.id);
                 if (inst) inst.openPopup();
               }, 720);
+            });
+          });
+
+          list.querySelectorAll('.sidebar-complete-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              window.toggleInteriorStatusById(btn.dataset.completeId);
+            });
+          });
+
+          list.querySelectorAll('.sidebar-delete-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              window.deletePinById(btn.dataset.deleteId);
             });
           });
         }
@@ -1718,7 +2007,7 @@
         map.on('zoom viewreset', updateZoomHudAndLabels);
 
         // =========================================================================
-        // 10. TOOLBAR, SIDEBAR TOGGLE, BACKUPS & HOTKEYS
+        // 10. TOOLBAR, SIDEBAR TOGGLE, HIGH-PRECISION SCREENSHOT IMPORTER & HOTKEYS
         // =========================================================================
         document.querySelectorAll('.tool-btn').forEach((btn) => {
           btn.addEventListener('click', () => setActiveTool(btn.dataset.tool));
@@ -1751,6 +2040,7 @@
         });
 
         document.getElementById('sidebarNewPinBtn').addEventListener('click', () => {
+          setActiveGroupForNewPin('');
           setActiveTool('pin');
           showToast('Haz clic sobre cualquier edificio o zona para guardar un pin');
         });
@@ -1779,7 +2069,7 @@
         // Export / Import JSON Backup
         document.getElementById('exportBackupBtn').addEventListener('click', () => {
           const backup = {
-            version: 4,
+            version: 6,
             exportedAt: new Date().toISOString(),
             tileUrl: state.tileUrl,
             tileTms: state.tileTms,
@@ -1820,7 +2110,7 @@
                 fogController.setStrokes(state.fogStrokes);
                 saveFogStrokes();
               }
-              showToast('Marcadores, difuminado y ajustes restaurados', 'success');
+              showToast('Marcadores, ramas, difuminado y ajustes restaurados', 'success');
             } catch {
               showToast('Archivo JSON inválido', 'error');
             }
@@ -1881,7 +2171,8 @@
               id: 'pin_starter_interior',
               lat: 0.3461,
               lng: -0.3900,
-              title: 'Ejemplo: Casa azul con caja fuerte',
+              title: 'Ejemplo: Edificio azul accesible',
+              group: '',
               category: 'interior_pending',
               notes: 'Usa [3] Descubrir para ir quitando el difuminado conforme exploras.\nActiva "Resaltar Interiores" arriba para distinguir mejor las casas azul oscuro.',
               createdAt: 'Guía inicial'
