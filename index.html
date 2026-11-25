@@ -38,7 +38,7 @@
           }
         }
       }
-    }
+    };
   </script>
 
   <style>
@@ -324,6 +324,18 @@
       border-radius: 50%;
       box-shadow: 0 0 10px rgba(6, 182, 212, 0.75);
     }
+
+    /* Mobile / Tablet Touch Optimizations */
+    .paint-touch-lock,
+    .paint-touch-lock #map {
+      touch-action: none !important;
+    }
+    @media (max-width: 767px) {
+      .toolbar .tool-btn,
+      .toolbar button {
+        min-height: 36px;
+      }
+    }
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -341,16 +353,26 @@
       <!-- Brush Preview Ring (visible in Descubrir / Cubrir mode) -->
       <div id="brushCursorRing" class="hidden fixed pointer-events-none z-[460] rounded-full border-2 border-viceCyan bg-viceCyan/10 -translate-x-1/2 -translate-y-1/2"></div>
 
+      <!-- Compact Floating Button to Expand Collapsed Toolbar (Mobile/Tablet Second Screen) -->
+      <button id="expandToolbarBtn" class="hidden fixed top-3.5 left-1/2 -translate-x-1/2 z-[900] glass-panel px-3.5 py-2 rounded-full text-slate-100 hover:text-viceCyan border border-white/15 shadow-xl transition flex items-center gap-2 text-xs font-semibold" title="Mostrar barra de herramientas">
+        <span>🛠️</span>
+        <span>Herramientas</span>
+        <svg class="w-3.5 h-3.5 text-viceCyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
       <!-- Open Right Sidebar Floating Button -->
-      <button id="openSidebarBtn" class="hidden fixed top-4 right-4 z-[900] glass-panel px-3 py-2.5 rounded-xl text-slate-200 hover:text-viceCyan border border-white/15 shadow-xl transition flex items-center gap-2 text-xs font-semibold" title="Abrir Mis Marcadores">
-        <span>📍 Pines</span>
+      <button id="openSidebarBtn" class="hidden fixed top-3.5 right-3.5 z-[900] glass-panel px-3 py-2 rounded-xl text-slate-200 hover:text-viceCyan border border-white/15 shadow-xl transition flex items-center gap-2 text-xs font-semibold" title="Abrir Mis Marcadores">
+        <span>📍</span>
+        <span class="hidden sm:inline">Pines</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
 
       <!-- Top Floating 2-Row Toolbar -->
-      <div class="toolbar fixed top-3.5 left-1/2 -translate-x-1/2 z-[900] max-w-[96vw] flex flex-col items-center gap-2 p-2 rounded-2xl glass-panel shadow-2xl">
+      <div id="topToolbar" class="toolbar fixed top-3.5 left-1/2 -translate-x-1/2 z-[900] max-w-[96vw] flex flex-col items-center gap-2 p-2 rounded-2xl glass-panel shadow-2xl transition-all duration-200">
         <!-- Row 1: Core Tools -->
         <div class="flex flex-wrap items-center justify-center gap-1.5">
           <!-- [1] Navegar -->
@@ -370,17 +392,31 @@
           <div class="w-[1px] h-6 bg-white/10 mx-0.5"></div>
 
           <!-- [3] Descubrir (Erase Blur) -->
-          <button data-tool="eraseFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Borrar difuminado (Tecla 3 · Clic der.: mover mapa)">
+          <button data-tool="eraseFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Borrar difuminado (Tecla 3 · 1 dedo pinta / 2 dedos mueven)">
             <span>🔦</span>
             <span class="hidden sm:inline">Descubrir</span>
             <kbd class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">3</kbd>
           </button>
 
           <!-- [4] Cubrir (Restore Blur) -->
-          <button data-tool="paintFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Volver a difuminar (Tecla 4 · Clic der.: mover mapa)">
+          <button data-tool="paintFog" class="tool-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition" title="Volver a difuminar (Tecla 4 · 1 dedo pinta / 2 dedos mueven)">
             <span>🌫️</span>
             <span class="hidden sm:inline">Cubrir</span>
             <kbd class="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">4</kbd>
+          </button>
+
+          <!-- [5] Ping Táctico (Ideal para móvil / tablet) -->
+          <button data-tool="ping" class="tool-btn flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition" title="Lanzar Ping táctico tocando el mapa (Tecla 5 o Alt+Clic)">
+            <span>📡</span>
+            <span class="hidden lg:inline">Ping</span>
+            <kbd class="hidden xl:inline-block text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 font-mono">5</kbd>
+          </button>
+
+          <!-- Collapse Top Toolbar Button -->
+          <button id="collapseToolbarBtn" type="button" class="p-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 hover:text-white transition" title="Plegar barra superior para ganar pantalla">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 15l7-7 7 7" />
+            </svg>
           </button>
         </div>
 
@@ -451,13 +487,16 @@
           <span class="hidden md:inline text-white/20">|</span>
           <span class="hidden md:inline text-emerald-300/90 font-sans">Alt+Clic / Rueda: Ping</span>
           <span id="hudRightPanHint" class="hidden text-white/20">|</span>
-          <span id="hudRightPanText" class="hidden text-cyan-300/90 font-sans">Clic der.: mover mapa</span>
+          <span id="hudRightPanText" class="hidden text-cyan-300/90 font-sans">Clic der. / 2 dedos: mover</span>
         </div>
       </div>
     </main>
 
-    <!-- Collapsible Right Sidebar -->
-    <aside id="sidebar" class="glass-panel z-[1000] h-full w-80 sm:w-96 flex-shrink-0 flex flex-col border-l border-white/10 transition-all duration-300 ease-out shadow-2xl">
+    <!-- Mobile Backdrop when Sidebar Drawer is Open -->
+    <div id="sidebarBackdrop" class="hidden md:hidden fixed inset-0 z-[990] bg-black/55 backdrop-blur-[2px] transition-opacity"></div>
+
+    <!-- Collapsible Right Sidebar (Drawer on Mobile, Docked on Desktop) -->
+    <aside id="sidebar" class="glass-panel fixed md:relative right-0 top-0 bottom-0 z-[1000] h-full w-[86vw] max-w-sm md:w-80 lg:w-96 flex-shrink-0 flex flex-col border-l border-white/10 transition-all duration-300 ease-out shadow-2xl">
       <!-- Header -->
       <div class="p-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-cyan-950/40 via-transparent to-blue-950/40">
         <div class="flex items-center gap-2.5">
@@ -717,7 +756,7 @@
               <span id="roomActiveNameBadge" class="px-2 py-0.5 rounded-lg bg-black/40 text-xs font-mono font-bold text-white"></span>
             </div>
             <p class="text-[11px] text-slate-300 leading-relaxed">
-              Usa <kbd class="px-1 py-0.5 rounded bg-black/40 text-cyan-200 font-mono text-[10px]">Alt + Clic</kbd> o el botón central del ratón para lanzar un ping táctico visible para toda la sala.
+              Usa <kbd class="px-1 py-0.5 rounded bg-black/40 text-cyan-200 font-mono text-[10px]">Alt + Clic</kbd>, el botón central o la herramienta <strong class="text-cyan-200">📡 Ping</strong> para avisar a toda la sala.
             </p>
           </div>
 
@@ -849,12 +888,12 @@
     /**
      * LEONIDA RECON HD — Single TileLayer + Backdrop-Filter Gaussian Fog Mask
      * + Pending/Completed Interior Tracking + Marker Groups / Branches
-     * + Right-Click Pan in Paint Mode + Firebase Realtime Database Co-op Rooms
+     * + Right-Click Pan & Mobile Touch Gestures + Firebase Co-op Rooms
      */
     window.addEventListener('DOMContentLoaded', () => {
       try {
         // =========================================================================
-        // 1. CONSTANTS & CATEGORIES
+        // 1. CONSTANTS, FIREBASE CONFIG & CATEGORIES
         // =========================================================================
         const DAY_TILE_URL = 'https://tiles.mapgenie.io/games/grand-theft-auto-6/leonida/day-v2/{z}/{y}/{x}.jpg';
         const NIGHT_TILE_URL = 'https://tiles.mapgenie.io/games/grand-theft-auto-6/leonida/night-v3/{z}/{y}/{x}.jpg';
@@ -867,6 +906,16 @@
         const LEONIDA_MAX_BOUNDS = L.latLngBounds([-0.3, -1.7], [1.7, 0.3]);
         const INITIAL_CENTER = [0.703, -0.703];
         const INITIAL_ZOOM = 10;
+
+        const FIREBASE_CONFIG = {
+          apiKey: "AIzaSyB8dTlFQ3B77y_lqX2Om99As2JhcbEg_Hw",
+          authDomain: "leonida-map-coop.firebaseapp.com",
+          databaseURL: "https://leonida-map-coop-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "leonida-map-coop",
+          storageBucket: "leonida-map-coop.firebasestorage.app",
+          messagingSenderId: "234774651466",
+          appId: "1:234774651466:web:99cdae1365c840b3297cb3"
+        };
 
         const CATEGORIES = [
           {
@@ -934,13 +983,13 @@
             color: '#64748b',
             bg: 'rgba(100,116,139,0.22)',
             svg: '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-6-5.33-6-10a6 6 0 1112 0c0 4.67-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></svg>'
-          },
+          }
         ];
 
         const EMPTY_TILE_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
         // =========================================================================
-        // 2. SAFE STORAGE & UI FEEDBACK HELPERS
+        // 2. SAFE STORAGE, CLIPBOARD, AUDIO & UI FEEDBACK HELPERS
         // =========================================================================
         function safeLoadArray(key) {
           try {
@@ -965,6 +1014,46 @@
             }
             return next;
           });
+        }
+
+        function copyTextToClipboard(text) {
+          try {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            temp.setAttribute('readonly', '');
+            temp.style.position = 'fixed';
+            temp.style.opacity = '0';
+            document.body.appendChild(temp);
+            temp.select();
+            temp.setSelectionRange(0, 99999);
+            const ok = document.execCommand('copy');
+            document.body.removeChild(temp);
+            return ok;
+          } catch {
+            return false;
+          }
+        }
+
+        function playPingSound() {
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.08, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.36);
+            setTimeout(() => ctx.close().catch(() => {}), 500);
+          } catch {
+            // Audio blocked before user gesture
+          }
         }
 
         function showToast(message, type = 'info') {
@@ -1012,6 +1101,14 @@
           });
         }
 
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
         // =========================================================================
         // 3. APPLICATION STATE
         // =========================================================================
@@ -1032,7 +1129,7 @@
           tileTms: localStorage.getItem('leonida_tile_tms') === 'true',
           markers: migrateMarkers(safeLoadArray(PINS_STORAGE_KEY)),
           fogStrokes: safeLoadArray(FOG_STROKES_KEY),
-          tool: 'pan', // 'pan' | 'pin' | 'eraseFog' | 'paintFog'
+          tool: 'pan', // 'pan' | 'pin' | 'eraseFog' | 'paintFog' | 'ping'
           brushSize: 65,
           fogBlurMode: initialBlurMode, // 'soft' | 'intense' | 'none'
           enhanceInteriors: localStorage.getItem('leonida_enhance_interiors') === 'true',
@@ -1063,559 +1160,28 @@
           lastPaintLatLng: null,
           isRightClickPanning: false,
           lastRightPanClient: null,
+
+          // Mobile / Tablet Touch & Second Screen State
+          toolbarCollapsed: false,
+          sidebarOpen: window.innerWidth >= 768,
+          activeTouchPoints: new Map(),
+          isTwoFingerGesture: false,
+          twoFingerPrevMid: null,
+          twoFingerPrevDist: null,
+          touchPaintPending: null,
+          touchPaintTimer: null
         };
 
         function checkReadOnlyGuard() {
           if (state.roomId && state.isViewOnly) {
-            showToast('🔒 Modo solo lectura: no puedes modificar esta sala', 'info');
+            showToast('🔒 Modo Solo Lectura: no puedes editar este mapa', 'info');
             return true;
           }
           return false;
         }
 
-        // =========================================================================
-        // 3B. FIREBASE REALTIME DATABASE — ONLINE ROOMS (?room=nombre&view=1)
-        // =========================================================================
-        // 3B. FIREBASE REALTIME DATABASE — ONLINE ROOMS (?room=nombre)
-        // =========================================================================
-        const FIREBASE_CONFIG = {
-          apiKey: "AIzaSyB8dTlFQ3B77y_lqX2Om99As2JhcbEg_Hw",
-          authDomain: "leonida-map-coop.firebaseapp.com",
-          databaseURL: "https://leonida-map-coop-default-rtdb.europe-west1.firebasedatabase.app",
-          projectId: "leonida-map-coop",
-          storageBucket: "leonida-map-coop.firebasestorage.app",
-          messagingSenderId: "234774651466",
-          appId: "1:234774651466:web:99cdae1365c840b3297cb3"
-        };
-
-        let firebaseDb = null;
-        try {
-          if (typeof firebase !== 'undefined') {
-            const fbApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
-            firebaseDb = fbApp.database();
-          }
-        } catch (fbErr) {
-          console.error('No se pudo inicializar Firebase:', fbErr);
-        }
-
-        function sanitizeRoomId(raw) {
-          return String(raw || '')
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9_-]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-            .slice(0, 36);
-        }
-
-        function getRoomIdFromUrl() {
-          try {
-            const params = new URLSearchParams(window.location.search);
-            const fromQuery = params.get('room');
-            if (fromQuery) return sanitizeRoomId(fromQuery);
-
-            const hashMatch = window.location.hash.match(/^#\/?room\/([^/?#]+)/i);
-            if (hashMatch && hashMatch[1]) return sanitizeRoomId(decodeURIComponent(hashMatch[1]));
-          } catch {
-            return '';
-          }
-          return '';
-        }
-
-        function getViewOnlyFromUrl() {
-          try {
-            const params = new URLSearchParams(window.location.search);
-            const v = (params.get('view') || '').toLowerCase();
-            return v === '1' || v === 'true' || v === 'readonly';
-          } catch {
-            return false;
-          }
-        }
-
-        function buildRoomInviteUrl(roomId, viewOnly = false) {
-          try {
-            const url = new URL(window.location.href);
-            url.hash = '';
-            url.searchParams.set('room', roomId);
-            if (viewOnly) {
-              url.searchParams.set('view', '1');
-            } else {
-              url.searchParams.delete('view');
-            }
-            return url.toString();
-          } catch {
-            return `?room=${encodeURIComponent(roomId)}${viewOnly ? '&view=1' : ''}`;
-          }
-        }
-
-        function syncBrowserUrlWithRoom(roomId, viewOnly = false) {
-          try {
-            const url = new URL(window.location.href);
-            url.hash = '';
-            if (roomId) {
-              url.searchParams.set('room', roomId);
-              if (viewOnly) {
-                url.searchParams.set('view', '1');
-              } else {
-                url.searchParams.delete('view');
-              }
-            } else {
-              url.searchParams.delete('room');
-              url.searchParams.delete('view');
-            }
-            window.history.replaceState({}, '', url.toString());
-          } catch {
-            // Ignored on file:// or sandboxed iframes
-          }
-        }
-
-        // Subtle synthesized sonar ping sound using Web Audio API (no external files)
-        let pingAudioCtx = null;
-        function playTacticalPingSound() {
-          try {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return;
-            if (!pingAudioCtx) pingAudioCtx = new AudioCtx();
-            if (pingAudioCtx.state === 'suspended') pingAudioCtx.resume();
-
-            const now = pingAudioCtx.currentTime;
-            const osc = pingAudioCtx.createOscillator();
-            const gain = pingAudioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, now);
-            osc.frequency.exponentialRampToValueAtTime(1320, now + 0.09);
-            osc.frequency.exponentialRampToValueAtTime(660, now + 0.28);
-
-            gain.gain.setValueAtTime(0.0001, now);
-            gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
-
-            osc.connect(gain);
-            gain.connect(pingAudioCtx.destination);
-            osc.start(now);
-            osc.stop(now + 0.36);
-          } catch {
-            // Ignore autoplay restriction errors
-          }
-        }
-
-        const roomSync = (() => {
-          let activeRoomRef = null;
-          let markersRef = null;
-          let fogBatchesRef = null;
-          let presenceRef = null;
-          let myPresenceRef = null;
-          let connectedRef = null;
-          let pingsRef = null;
-          let activityRef = null;
-          let joinedAtTs = 0;
-          let lastSeenActivityId = null;
-
-          function renderOnlineUsersUI() {
-            const count = Math.max(1, state.onlineUsers.length);
-            const countBadge = document.getElementById('roomOnlineCountBadge');
-            const usersListEl = document.getElementById('roomOnlineUsersList');
-            const label = document.getElementById('roomStatusLabel');
-
-            if (countBadge) {
-              countBadge.textContent = `${count} ${count === 1 ? 'en sala' : 'en sala'}`;
-            }
-
-            if (state.roomId && label) {
-              label.textContent = state.isViewOnly
-                ? `Sala: ${state.roomId} (Ver · ${count})`
-                : `Sala: ${state.roomId} · ${count}`;
-            }
-
-            if (usersListEl) {
-              if (state.onlineUsers.length === 0) {
-                usersListEl.innerHTML = `<span class="text-[11px] text-slate-400">Conectando...</span>`;
-              } else {
-                usersListEl.innerHTML = state.onlineUsers.map((u) => {
-                  const isMe = u.id === state.clientId;
-                  const roleTag = u.viewOnly ? ' 👁️' : '';
-                  return `
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slatePanel border border-white/10 text-[11px] font-semibold text-slate-100">
-                      <span class="w-2 h-2 rounded-full shrink-0" style="background:${escapeHtml(u.color || '#06b6d4')}"></span>
-                      <span>${escapeHtml(u.name || 'Jugador')}${isMe ? ' (tú)' : ''}${roleTag}</span>
-                    </span>
-                  `;
-                }).join('');
-              }
-            }
-          }
-
-          function updateRoomUI() {
-            const btn = document.getElementById('roomStatusBtn');
-            const dot = document.getElementById('roomStatusDot');
-            const label = document.getElementById('roomStatusLabel');
-            const activePanel = document.getElementById('roomActivePanel');
-            const joinForm = document.getElementById('roomJoinForm');
-            const badge = document.getElementById('roomActiveNameBadge');
-            const syncStatusText = document.getElementById('roomSyncStatusText');
-            const inviteInput = document.getElementById('roomInviteLinkInput');
-            const viewOnlyInput = document.getElementById('roomViewOnlyLinkInput');
-            const editLinkContainer = document.getElementById('roomEditLinkContainer');
-            const activeNickInput = document.getElementById('roomActiveNicknameInput');
-            const joinNickInput = document.getElementById('roomNicknameInput');
-            const viewOnlyBanner = document.getElementById('viewOnlyBanner');
-
-            if (joinNickInput && !joinNickInput.value) {
-              joinNickInput.value = state.nickname;
-            }
-            if (activeNickInput) {
-              activeNickInput.value = state.nickname;
-            }
-
-            if (state.roomId) {
-              const count = Math.max(1, state.onlineUsers.length);
-              if (state.isViewOnly) {
-                btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/45 text-xs font-bold text-amber-200 transition';
-                dot.textContent = '👁️';
-                label.textContent = `Sala: ${state.roomId} (Ver · ${count})`;
-                syncStatusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Modo Solo Lectura`;
-                syncStatusText.className = 'text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5';
-                editLinkContainer.classList.add('hidden');
-                viewOnlyBanner.classList.remove('hidden');
-              } else {
-                btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition';
-                dot.textContent = '🟢';
-                label.textContent = `Sala: ${state.roomId} · ${count}`;
-                syncStatusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizando en vivo`;
-                syncStatusText.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5';
-                editLinkContainer.classList.remove('hidden');
-                viewOnlyBanner.classList.add('hidden');
-              }
-              activePanel.classList.remove('hidden');
-              joinForm.classList.add('hidden');
-              badge.textContent = state.roomId;
-              inviteInput.value = buildRoomInviteUrl(state.roomId, false);
-              viewOnlyInput.value = buildRoomInviteUrl(state.roomId, true);
-              renderOnlineUsersUI();
-            } else {
-              btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slatePanel/90 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition';
-              dot.textContent = '🌐';
-              label.textContent = 'Sala Online';
-              activePanel.classList.add('hidden');
-              joinForm.classList.remove('hidden');
-              viewOnlyBanner.classList.add('hidden');
-            }
-          }
-
-          function detachListeners() {
-            if (markersRef) markersRef.off();
-            if (fogBatchesRef) fogBatchesRef.off();
-            if (presenceRef) presenceRef.off();
-            if (connectedRef) connectedRef.off();
-            if (pingsRef) pingsRef.off();
-            if (activityRef) activityRef.off();
-            if (myPresenceRef) {
-              myPresenceRef.remove().catch(() => {});
-            }
-            activeRoomRef = null;
-            markersRef = null;
-            fogBatchesRef = null;
-            presenceRef = null;
-            myPresenceRef = null;
-            connectedRef = null;
-            pingsRef = null;
-            activityRef = null;
-            state.roomConnected = false;
-            state.onlineUsers = [];
-          }
-
-          function writeMyPresence() {
-            if (!myPresenceRef) return;
-            myPresenceRef.onDisconnect().remove().catch(() => {});
-            myPresenceRef.set({
-              id: state.clientId,
-              name: state.nickname,
-              color: state.userColor,
-              viewOnly: state.isViewOnly,
-              joinedAt: firebase.database.ServerValue.TIMESTAMP
-            }).catch(() => {});
-          }
-
-          function updateNickname(newName) {
-            const clean = String(newName || '').trim().slice(0, 20);
-            if (!clean) return;
-            state.nickname = clean;
-            localStorage.setItem('leonida_coop_nickname', clean);
-            if (state.roomId && myPresenceRef) {
-              writeMyPresence();
-            }
-            updateRoomUI();
-          }
-
-          function broadcastActivity(message) {
-            if (!activityRef || state.isViewOnly) return;
-            const actId = 'act_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
-            lastSeenActivityId = actId;
-            activityRef.set({
-              id: actId,
-              actorId: state.clientId,
-              actorName: state.nickname,
-              message,
-              ts: Date.now()
-            }).catch(() => {});
-          }
-
-          function sendPing(latlng) {
-            const pingPayload = {
-              lat: Number(latlng.lat.toFixed(6)),
-              lng: Number(latlng.lng.toFixed(6)),
-              senderId: state.clientId,
-              senderName: state.nickname,
-              color: state.userColor,
-              ts: Date.now()
-            };
-
-            // Local immediate feedback
-            renderTacticalPing(pingPayload);
-
-            if (!pingsRef || state.isViewOnly) return;
-            const pushed = pingsRef.push(pingPayload);
-            setTimeout(() => {
-              pushed.remove().catch(() => {});
-            }, 6500);
-          }
-
-          async function joinRoom(rawRoomId, seedLocalIfEmpty = false, viewOnly = false) {
-            const roomId = sanitizeRoomId(rawRoomId);
-            if (!roomId) {
-              showToast('Escribe un nombre válido para la sala', 'error');
-              return false;
-            }
-            if (!firebaseDb) {
-              showToast('No se pudo conectar con Firebase. Revisa tu conexión.', 'error');
-              return false;
-            }
-
-            detachListeners();
-            state.roomId = roomId;
-            state.isViewOnly = Boolean(viewOnly);
-            state.pendingFogBatch = [];
-            joinedAtTs = Date.now();
-            lastSeenActivityId = null;
-
-            if (state.isViewOnly) {
-              setActiveTool('pan');
-            }
-
-            syncBrowserUrlWithRoom(roomId, state.isViewOnly);
-            updateRoomUI();
-
-            activeRoomRef = firebaseDb.ref(`rooms/${roomId}`);
-            markersRef = activeRoomRef.child('markers');
-            fogBatchesRef = activeRoomRef.child('fogBatches');
-            presenceRef = activeRoomRef.child('presence');
-            myPresenceRef = presenceRef.child(state.clientId);
-            pingsRef = activeRoomRef.child('pings');
-            activityRef = activeRoomRef.child('lastActivity');
-            connectedRef = firebaseDb.ref('.info/connected');
-
-            try {
-              const snap = await activeRoomRef.once('value');
-              const existing = snap.val();
-
-              if (!existing && seedLocalIfEmpty && !state.isViewOnly) {
-                const localMarkers = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
-                const localFog = safeLoadArray(FOG_STROKES_KEY);
-                const markersMap = {};
-                localMarkers.forEach((m, idx) => {
-                  if (m && m.id) {
-                    markersMap[m.id] = {
-                      ...m,
-                      createdBy: m.createdBy || state.nickname,
-                      createdTs: m.createdTs || (Date.now() - idx * 1000)
-                    };
-                  }
-                });
-
-                const seedPayload = {
-                  createdAt: Date.now(),
-                  markers: Object.keys(markersMap).length ? markersMap : null,
-                  fogBatches: localFog.length ? { initial_seed: localFog } : null
-                };
-                await activeRoomRef.set(seedPayload);
-              }
-            } catch (err) {
-              console.error('Error al comprobar/inicializar sala:', err);
-              showToast('Error de permisos o conexión con la sala', 'error');
-              leaveRoom(false);
-              return false;
-            }
-
-            // Presence tracking with automatic disconnect cleanup
-            connectedRef.on('value', (snap) => {
-              if (snap.val() === true) {
-                writeMyPresence();
-              }
-            });
-
-            presenceRef.on('value', (snap) => {
-              const val = snap.val() || {};
-              state.onlineUsers = Object.values(val);
-              renderOnlineUsersUI();
-            });
-
-            // Real-time Tactical Pings
-            pingsRef.on('child_added', (snap) => {
-              const ping = snap.val();
-              if (!ping || typeof ping.lat !== 'number' || typeof ping.lng !== 'number') return;
-              if (ping.senderId === state.clientId) return; // Already rendered locally
-              if (ping.ts && ping.ts < joinedAtTs - 2000) return; // Ignore stale pings
-              renderTacticalPing(ping);
-            });
-
-            // Real-time Activity Toasts
-            activityRef.on('value', (snap) => {
-              const act = snap.val();
-              if (!act || !act.id || act.id === lastSeenActivityId) return;
-              lastSeenActivityId = act.id;
-              if (act.actorId === state.clientId) return;
-              if (act.ts && act.ts < joinedAtTs) return;
-              showToast(`👤 ${act.actorName || 'Alguien'} ${act.message}`, 'info');
-            });
-
-            // Listen to real-time markers updates
-            markersRef.on('value', (snap) => {
-              const val = snap.val();
-              const arr = val ? Object.values(val) : [];
-              arr.sort((a, b) => (b.createdTs || 0) - (a.createdTs || 0));
-              state.markers = migrateMarkers(arr);
-              renderMarkersOnMap();
-              renderSidebarMarkers();
-            }, (err) => {
-              console.error('Error escuchando marcadores:', err);
-            });
-
-            // Listen to real-time fog updates
-            fogBatchesRef.on('value', (snap) => {
-              const val = snap.val();
-              const flattened = [];
-              if (val && typeof val === 'object') {
-                Object.keys(val).sort().forEach((batchKey) => {
-                  const batch = val[batchKey];
-                  if (Array.isArray(batch)) {
-                    for (let i = 0; i < batch.length; i++) {
-                      if (batch[i]) flattened.push(batch[i]);
-                    }
-                  }
-                });
-              }
-              if (state.pendingFogBatch.length > 0) {
-                state.fogStrokes = flattened.concat(state.pendingFogBatch);
-              } else {
-                state.fogStrokes = flattened;
-              }
-              fogController.setStrokes(state.fogStrokes);
-            }, (err) => {
-              console.error('Error escuchando niebla:', err);
-            });
-
-            state.roomConnected = true;
-            showToast(
-              state.isViewOnly
-                ? `👁️ Conectado en Solo Lectura a "${roomId}"`
-                : `🟢 Conectado a la sala "${roomId}" como ${state.nickname}`,
-              'success'
-            );
-            return true;
-          }
-
-          function leaveRoom(notify = true) {
-            detachListeners();
-            state.roomId = null;
-            state.isViewOnly = false;
-            state.pendingFogBatch = [];
-            syncBrowserUrlWithRoom('', false);
-            updateRoomUI();
-
-            // Restore local storage state
-            state.markers = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
-            state.fogStrokes = safeLoadArray(FOG_STROKES_KEY);
-            fogController.setStrokes(state.fogStrokes);
-            renderMarkersOnMap();
-            renderSidebarMarkers();
-
-            if (notify) {
-              showToast('Has vuelto a tu mapa local', 'info');
-            }
-          }
-
-          function upsertMarker(pin, activityMsg = '') {
-            if (!markersRef || !pin || !pin.id || state.isViewOnly) return;
-            markersRef.child(pin.id).set(pin).then(() => {
-              if (activityMsg) broadcastActivity(activityMsg);
-            }).catch((err) => {
-              console.error('Error guardando pin en sala:', err);
-              showToast('Error al sincronizar el pin', 'error');
-            });
-          }
-
-          function removeMarker(id, title = '') {
-            if (!markersRef || !id || state.isViewOnly) return;
-            markersRef.child(id).remove().then(() => {
-              if (title) broadcastActivity(`eliminó "${title}"`);
-            }).catch((err) => {
-              console.error('Error eliminando pin en sala:', err);
-              showToast('Error al eliminar el pin de la sala', 'error');
-            });
-          }
-
-          function replaceAllMarkers(markersArr) {
-            if (!markersRef || state.isViewOnly) return;
-            const markersMap = {};
-            markersArr.forEach((m, idx) => {
-              if (m && m.id) {
-                markersMap[m.id] = { ...m, createdTs: m.createdTs || (Date.now() - idx * 1000) };
-              }
-            });
-            markersRef.set(Object.keys(markersMap).length ? markersMap : null).catch((err) => {
-              console.error('Error importando pines en sala:', err);
-            });
-          }
-
-          function flushPendingFogBatch() {
-            if (!fogBatchesRef || state.pendingFogBatch.length === 0 || state.isViewOnly) return;
-            const batchToSend = state.pendingFogBatch.slice();
-            state.pendingFogBatch = [];
-            fogBatchesRef.push(batchToSend).catch((err) => {
-              console.error('Error enviando trazo de niebla:', err);
-            });
-          }
-
-          function replaceAllFog(strokesArr) {
-            if (!fogBatchesRef || state.isViewOnly) return;
-            state.pendingFogBatch = [];
-            const payload = Array.isArray(strokesArr) && strokesArr.length > 0
-              ? { ['reset_' + Date.now()]: strokesArr }
-              : null;
-            fogBatchesRef.set(payload).catch((err) => {
-              console.error('Error actualizando niebla en sala:', err);
-            });
-          }
-
-          return {
-            updateRoomUI,
-            updateNickname,
-            sendPing,
-            broadcastActivity,
-            joinRoom,
-            leaveRoom,
-            upsertMarker,
-            removeMarker,
-            replaceAllMarkers,
-            flushPendingFogBatch,
-            replaceAllFog
-          };
-        })();
-
         function saveFogStrokes() {
-          if (state.roomId) {
-            roomSync.replaceAllFog(state.fogStrokes);
-            return;
-          }
+          if (state.roomId) return;
           const strokes = Array.isArray(state.fogStrokes) ? state.fogStrokes : [];
           try {
             localStorage.setItem(FOG_STROKES_KEY, JSON.stringify(strokes));
@@ -1739,7 +1305,6 @@
             const width = Math.max(1, Math.round(rect.width));
             const height = Math.max(1, Math.round(rect.height));
 
-            // Half-resolution alpha mask keeps 60 FPS encoding even during continuous brush strokes
             const scale = 0.5;
             const cw = Math.max(1, Math.round(width * scale));
             const ch = Math.max(1, Math.round(height * scale));
@@ -1752,7 +1317,6 @@
             maskCtx.save();
             maskCtx.setTransform(scale, 0, 0, scale, 0, 0);
 
-            // Solid white = backdrop-filter blur is active over the whole screen
             maskCtx.globalCompositeOperation = 'source-over';
             maskCtx.fillStyle = '#ffffff';
             maskCtx.fillRect(0, 0, width, height);
@@ -1782,7 +1346,6 @@
               }
 
               if (s.mode === 'erase') {
-                // Punch transparent hole into mask -> sharp HD map shows through
                 maskCtx.globalCompositeOperation = 'destination-out';
                 const grad = maskCtx.createRadialGradient(cx, cy, radiusPx * 0.45, cx, cy, radiusPx);
                 grad.addColorStop(0, 'rgba(0,0,0,1)');
@@ -1793,7 +1356,6 @@
                 maskCtx.arc(cx, cy, radiusPx, 0, Math.PI * 2);
                 maskCtx.fill();
               } else {
-                // Paint white back into mask -> restores Gaussian blur
                 maskCtx.globalCompositeOperation = 'source-over';
                 const grad = maskCtx.createRadialGradient(cx, cy, radiusPx * 0.5, cx, cy, radiusPx);
                 grad.addColorStop(0, 'rgba(255,255,255,1)');
@@ -1913,8 +1475,12 @@
           if (!ok) return;
           state.fogStrokes = [];
           fogController.setStrokes(state.fogStrokes);
-          saveFogStrokes();
-          if (state.roomId) roomSync.broadcastActivity('reinició la niebla del mapa');
+          if (state.roomId) {
+            roomSync.replaceAllFogStrokes([]);
+            roomSync.logActivity('reinició el difuminado del mapa');
+          } else {
+            saveFogStrokes();
+          }
           if (state.fogBlurMode === 'none') {
             state.fogBlurMode = 'soft';
             localStorage.setItem('leonida_fog_blur_mode', 'soft');
@@ -1927,12 +1493,17 @@
           if (checkReadOnlyGuard()) return;
           const ok = await showConfirm('¿Despejar todo el mapa?', 'Se revelará todo el mapa. Puedes hacer copia de seguridad antes con Exportar .JSON.');
           if (!ok) return;
-          state.fogStrokes = [
+          const fullReveal = [
             { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1], radiusMeters: 1500000, mode: 'erase' }
           ];
+          state.fogStrokes = fullReveal;
           fogController.setStrokes(state.fogStrokes);
-          saveFogStrokes();
-          if (state.roomId) roomSync.broadcastActivity('despejó todo el mapa');
+          if (state.roomId) {
+            roomSync.replaceAllFogStrokes(fullReveal);
+            roomSync.logActivity('despejó toda la niebla del mapa');
+          } else {
+            saveFogStrokes();
+          }
           showToast('Mapa despejado por completo');
         }
 
@@ -1943,39 +1514,529 @@
         document.getElementById('modalRevealAllFogBtn').addEventListener('click', handleRevealAllFog);
 
         // =========================================================================
-        // 6. CUSTOM CONTEXT MARKERS + GROUPS / BRANCHES + ROUTE LINES + LIVE PINGS
+        // 5B. ONLINE CO-OP ROOMS (FIREBASE REALTIME DATABASE)
+        //     Presence, Tactical Live Pings, Activity Feed & Read-Only Mode
+        // =========================================================================
+        const pingsLayer = L.layerGroup().addTo(map);
+
+        const roomSync = (() => {
+          let db = null;
+          let markersRef = null;
+          let fogRef = null;
+          let presenceRef = null;
+          let myPresenceRef = null;
+          let pingsRef = null;
+          let activityRef = null;
+          let joinedAt = 0;
+
+          function ensureDb() {
+            if (db) return db;
+            if (typeof firebase === 'undefined') {
+              throw new Error('Firebase SDK no cargado');
+            }
+            if (!firebase.apps || firebase.apps.length === 0) {
+              firebase.initializeApp(FIREBASE_CONFIG);
+            }
+            db = firebase.database();
+            return db;
+          }
+
+          function sanitizeRoomId(raw) {
+            return String(raw || '')
+              .trim()
+              .toLowerCase()
+              .replace(/[^a-z0-9-_]/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '')
+              .slice(0, 36);
+          }
+
+          function parseRoomFromUrl() {
+            try {
+              const params = new URLSearchParams(window.location.search);
+              const qRoom = params.get('room');
+              const viewParam = params.get('view');
+              let room = qRoom ? sanitizeRoomId(qRoom) : null;
+
+              if (!room) {
+                const hashMatch = window.location.hash.match(/#\/?room\/([a-zA-Z0-9_-]+)/i);
+                if (hashMatch && hashMatch[1]) {
+                  room = sanitizeRoomId(hashMatch[1]);
+                }
+              }
+
+              const isViewOnly = viewParam === '1' || viewParam === 'true' || window.location.hash.includes('view=1');
+              return { roomId: room || null, isViewOnly };
+            } catch {
+              return { roomId: null, isViewOnly: false };
+            }
+          }
+
+          function buildRoomUrl(roomId, viewOnly = false) {
+            try {
+              const url = new URL(window.location.href);
+              url.hash = '';
+              url.searchParams.set('room', roomId);
+              if (viewOnly) {
+                url.searchParams.set('view', '1');
+              } else {
+                url.searchParams.delete('view');
+              }
+              return url.toString();
+            } catch {
+              return `?room=${encodeURIComponent(roomId)}${viewOnly ? '&view=1' : ''}`;
+            }
+          }
+
+          function updateBrowserUrl(roomId, viewOnly = false) {
+            try {
+              const url = new URL(window.location.href);
+              url.hash = '';
+              if (roomId) {
+                url.searchParams.set('room', roomId);
+                if (viewOnly) {
+                  url.searchParams.set('view', '1');
+                } else {
+                  url.searchParams.delete('view');
+                }
+              } else {
+                url.searchParams.delete('room');
+                url.searchParams.delete('view');
+              }
+              window.history.replaceState({}, '', url.toString());
+            } catch {
+              // Ignore in sandboxed/blob frames
+            }
+          }
+
+          function renderPingVisual(lat, lng, nickname, color) {
+            const safeName = escapeHtml(nickname || 'Explorador');
+            const safeColor = color || '#06b6d4';
+            const icon = L.divIcon({
+              className: '',
+              iconSize: [0, 0],
+              iconAnchor: [0, 0],
+              html: `
+                <div class="tactical-ping-wrapper" style="--ping-color:${safeColor}">
+                  <div class="tactical-ping-wave"></div>
+                  <div class="tactical-ping-wave wave-2"></div>
+                  <div class="tactical-ping-core"></div>
+                  <div class="tactical-ping-tag">📡 ${safeName}</div>
+                </div>
+              `
+            });
+            const pingMarker = L.marker([lat, lng], { icon, interactive: false, zIndexOffset: 1500 }).addTo(pingsLayer);
+            playPingSound();
+            setTimeout(() => {
+              pingsLayer.removeLayer(pingMarker);
+            }, 5000);
+          }
+
+          function sendPing(latlng) {
+            if (!latlng) return;
+            const lat = Number(latlng.lat.toFixed(6));
+            const lng = Number(latlng.lng.toFixed(6));
+            renderPingVisual(lat, lng, state.nickname, state.userColor);
+
+            if (state.roomId && pingsRef && !state.isViewOnly) {
+              pingsRef.push({
+                lat,
+                lng,
+                by: state.nickname,
+                color: state.userColor,
+                clientId: state.clientId,
+                ts: Date.now()
+              }).catch(() => {});
+            } else if (!state.roomId) {
+              showToast('📡 Ping local enviado (en una Sala Online lo verán tus amigos)', 'info');
+            }
+          }
+
+          function logActivity(text) {
+            if (!state.roomId || !activityRef || state.isViewOnly) return;
+            activityRef.push({
+              by: state.nickname,
+              text,
+              clientId: state.clientId,
+              ts: Date.now()
+            }).catch(() => {});
+          }
+
+          function updateOnlineUsersUI() {
+            const count = Math.max(1, state.onlineUsers.length);
+            const countBadge = document.getElementById('roomOnlineCountBadge');
+            const listEl = document.getElementById('roomOnlineUsersList');
+
+            if (countBadge) {
+              countBadge.textContent = `${count} en sala`;
+            }
+            if (listEl) {
+              if (state.onlineUsers.length === 0) {
+                listEl.innerHTML = `<span class="text-[11px] text-slate-400">Conectando...</span>`;
+              } else {
+                listEl.innerHTML = state.onlineUsers.map((u) => {
+                  const isMe = u.clientId === state.clientId;
+                  return `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-slate-100">
+                      <span class="w-2 h-2 rounded-full shrink-0" style="background:${escapeHtml(u.color || '#06b6d4')}"></span>
+                      <span class="font-semibold">${escapeHtml(u.name || 'Explorador')}</span>
+                      ${u.viewOnly ? '<span class="text-[10px] text-amber-300" title="Solo lectura">🔒</span>' : ''}
+                      ${isMe ? '<span class="text-[10px] text-slate-400">(tú)</span>' : ''}
+                    </span>
+                  `;
+                }).join('');
+              }
+            }
+            updateRoomUI();
+          }
+
+          function updateRoomUI() {
+            const btn = document.getElementById('roomStatusBtn');
+            const dot = document.getElementById('roomStatusDot');
+            const label = document.getElementById('roomStatusLabel');
+            const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+            const activePanel = document.getElementById('roomActivePanel');
+            const joinForm = document.getElementById('roomJoinForm');
+            const activeNameBadge = document.getElementById('roomActiveNameBadge');
+            const inviteInput = document.getElementById('roomInviteLinkInput');
+            const viewOnlyInput = document.getElementById('roomViewOnlyLinkInput');
+            const editLinkContainer = document.getElementById('roomEditLinkContainer');
+            const activeNickInput = document.getElementById('roomActiveNicknameInput');
+
+            if (state.roomId) {
+              const count = Math.max(1, state.onlineUsers.length);
+              btn.classList.remove('bg-slatePanel/90', 'border-white/10', 'text-slate-200');
+              btn.classList.add('bg-emerald-500/20', 'border-emerald-400/45', 'text-emerald-200');
+              dot.textContent = state.isViewOnly ? '🔒' : '🟢';
+              label.textContent = `Sala: ${state.roomId} · ${count}`;
+
+              viewOnlyBanner.classList.toggle('hidden', !state.isViewOnly);
+              activePanel.classList.remove('hidden');
+              joinForm.classList.add('hidden');
+              activeNameBadge.textContent = state.roomId;
+              inviteInput.value = buildRoomUrl(state.roomId, false);
+              viewOnlyInput.value = buildRoomUrl(state.roomId, true);
+              editLinkContainer.classList.toggle('hidden', state.isViewOnly);
+              if (activeNickInput && document.activeElement !== activeNickInput) {
+                activeNickInput.value = state.nickname;
+              }
+            } else {
+              btn.classList.add('bg-slatePanel/90', 'border-white/10', 'text-slate-200');
+              btn.classList.remove('bg-emerald-500/20', 'border-emerald-400/45', 'text-emerald-200');
+              dot.textContent = '🌐';
+              label.textContent = 'Sala Online';
+
+              viewOnlyBanner.classList.add('hidden');
+              activePanel.classList.add('hidden');
+              joinForm.classList.remove('hidden');
+            }
+          }
+
+          function detachListeners() {
+            if (markersRef) markersRef.off();
+            if (fogRef) fogRef.off();
+            if (presenceRef) presenceRef.off();
+            if (pingsRef) pingsRef.off();
+            if (activityRef) activityRef.off();
+            if (myPresenceRef) {
+              myPresenceRef.remove().catch(() => {});
+            }
+            markersRef = null;
+            fogRef = null;
+            presenceRef = null;
+            myPresenceRef = null;
+            pingsRef = null;
+            activityRef = null;
+            state.onlineUsers = [];
+          }
+
+          async function joinRoom(rawRoomId, options = {}) {
+            const { seedLocalIfEmpty = false, viewOnly = false } = options;
+            const roomId = sanitizeRoomId(rawRoomId);
+            if (!roomId) {
+              showToast('Escribe un nombre válido para la sala', 'error');
+              return false;
+            }
+
+            try {
+              const database = ensureDb();
+              detachListeners();
+
+              state.roomId = roomId;
+              state.roomConnected = true;
+              state.isViewOnly = Boolean(viewOnly);
+              state.pendingFogBatch = [];
+              joinedAt = Date.now();
+
+              updateBrowserUrl(roomId, state.isViewOnly);
+              updateRoomUI();
+
+              const basePath = `rooms/${roomId}`;
+              markersRef = database.ref(`${basePath}/markers`);
+              fogRef = database.ref(`${basePath}/fogStrokes`);
+              presenceRef = database.ref(`${basePath}/presence`);
+              myPresenceRef = presenceRef.child(state.clientId);
+              pingsRef = database.ref(`${basePath}/pings`);
+              activityRef = database.ref(`${basePath}/activity`);
+
+              myPresenceRef.onDisconnect().remove();
+              myPresenceRef.set({
+                clientId: state.clientId,
+                name: state.nickname,
+                color: state.userColor,
+                viewOnly: state.isViewOnly,
+                ts: Date.now()
+              }).catch(() => {});
+
+              if (seedLocalIfEmpty && !state.isViewOnly) {
+                const snap = await database.ref(basePath).once('value');
+                const val = snap.val();
+                const hasRemoteMarkers = val && val.markers && Object.keys(val.markers).length > 0;
+                const hasRemoteFog = val && val.fogStrokes && Object.keys(val.fogStrokes).length > 0;
+
+                if (!hasRemoteMarkers && !hasRemoteFog) {
+                  const localPins = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
+                  const localFog = safeLoadArray(FOG_STROKES_KEY);
+                  const markerObj = {};
+                  localPins.forEach((p) => {
+                    if (p && p.id) markerObj[p.id] = p;
+                  });
+                  if (Object.keys(markerObj).length > 0) {
+                    await markersRef.set(markerObj);
+                  }
+                  if (localFog.length > 0) {
+                    await fogRef.set({ initial: localFog });
+                  }
+                }
+              }
+
+              markersRef.on('value', (snap) => {
+                const raw = snap.val();
+                const list = raw ? Object.values(raw).filter(Boolean) : [];
+                list.sort((a, b) => (b.updatedAt || b.createdTs || 0) - (a.updatedAt || a.createdTs || 0));
+                state.markers = migrateMarkers(list);
+                renderMarkersOnMap();
+                renderSidebarMarkers();
+              });
+
+              fogRef.on('value', (snap) => {
+                const raw = snap.val();
+                const flat = [];
+                if (Array.isArray(raw)) {
+                  raw.forEach((item) => {
+                    if (item) flat.push(item);
+                  });
+                } else if (raw && typeof raw === 'object') {
+                  Object.keys(raw).sort().forEach((k) => {
+                    const entry = raw[k];
+                    if (Array.isArray(entry)) {
+                      entry.forEach((s) => {
+                        if (s) flat.push(s);
+                      });
+                    } else if (entry && typeof entry === 'object' && typeof entry.lat === 'number') {
+                      flat.push(entry);
+                    }
+                  });
+                }
+                state.fogStrokes = flat;
+                fogController.setStrokes(state.fogStrokes);
+              });
+
+              presenceRef.on('value', (snap) => {
+                const raw = snap.val();
+                state.onlineUsers = raw ? Object.values(raw).filter(Boolean) : [];
+                updateOnlineUsersUI();
+              });
+
+              pingsRef.limitToLast(10).on('child_added', (snap) => {
+                const p = snap.val();
+                if (!p || p.clientId === state.clientId) return;
+                if (!p.ts || p.ts < joinedAt - 1500) return;
+                if (typeof p.lat === 'number' && typeof p.lng === 'number') {
+                  renderPingVisual(p.lat, p.lng, p.by, p.color);
+                }
+              });
+
+              activityRef.limitToLast(10).on('child_added', (snap) => {
+                const act = snap.val();
+                if (!act || act.clientId === state.clientId) return;
+                if (!act.ts || act.ts < joinedAt - 1500) return;
+                showToast(`👤 ${act.by || 'Amigo'} ${act.text}`, 'info');
+              });
+
+              if (state.isViewOnly) {
+                setActiveTool('pan');
+                showToast(`🔒 Conectado a "${roomId}" en Modo Solo Lectura`, 'info');
+              } else {
+                showToast(`🟢 Conectado a la sala "${roomId}" en vivo`, 'success');
+              }
+              return true;
+            } catch (err) {
+              console.error('Firebase joinRoom error:', err);
+              showToast('No se pudo conectar a Firebase. Revisa tus reglas o conexión.', 'error');
+              return false;
+            }
+          }
+
+          function leaveRoom() {
+            detachListeners();
+            state.roomId = null;
+            state.roomConnected = false;
+            state.isViewOnly = false;
+            state.pendingFogBatch = [];
+            updateBrowserUrl(null, false);
+
+            state.markers = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
+            state.fogStrokes = safeLoadArray(FOG_STROKES_KEY);
+            fogController.setStrokes(state.fogStrokes);
+            renderMarkersOnMap();
+            renderSidebarMarkers();
+            updateRoomUI();
+            showToast('Has vuelto a tu mapa local', 'info');
+          }
+
+          function updateNickname(nextName) {
+            const clean = String(nextName || '').trim().slice(0, 20);
+            if (!clean) return;
+            state.nickname = clean;
+            localStorage.setItem('leonida_coop_nickname', clean);
+            if (myPresenceRef) {
+              myPresenceRef.update({ name: clean }).catch(() => {});
+            }
+          }
+
+          function upsertMarker(marker) {
+            if (!state.roomId || !markersRef || state.isViewOnly) return;
+            markersRef.child(marker.id).set(marker).catch(() => {});
+          }
+
+          function deleteMarker(id) {
+            if (!state.roomId || !markersRef || state.isViewOnly) return;
+            markersRef.child(id).remove().catch(() => {});
+          }
+
+          function replaceAllMarkers(markersArr) {
+            if (!state.roomId || !markersRef || state.isViewOnly) return;
+            const obj = {};
+            markersArr.forEach((m) => {
+              if (m && m.id) obj[m.id] = m;
+            });
+            markersRef.set(obj).catch(() => {});
+          }
+
+          function flushPendingFogBatch() {
+            if (!state.roomId || !fogRef || state.isViewOnly) return;
+            if (!state.pendingFogBatch || state.pendingFogBatch.length === 0) return;
+            const batch = state.pendingFogBatch.splice(0, state.pendingFogBatch.length);
+            fogRef.push(batch).catch(() => {});
+          }
+
+          function replaceAllFogStrokes(strokesArr) {
+            if (!state.roomId || !fogRef || state.isViewOnly) return;
+            state.pendingFogBatch = [];
+            if (!strokesArr || strokesArr.length === 0) {
+              fogRef.remove().catch(() => {});
+            } else {
+              fogRef.set({ initial: strokesArr }).catch(() => {});
+            }
+          }
+
+          return {
+            parseRoomFromUrl,
+            joinRoom,
+            leaveRoom,
+            updateRoomUI,
+            updateNickname,
+            sendPing,
+            logActivity,
+            upsertMarker,
+            deleteMarker,
+            replaceAllMarkers,
+            flushPendingFogBatch,
+            replaceAllFogStrokes
+          };
+        })();
+
+        // Room Modal Event Listeners
+        const roomModal = document.getElementById('roomModal');
+        const roomNameInput = document.getElementById('roomNameInput');
+        const roomNicknameInput = document.getElementById('roomNicknameInput');
+        const roomActiveNicknameInput = document.getElementById('roomActiveNicknameInput');
+        const roomSeedLocalCheckbox = document.getElementById('roomSeedLocalCheckbox');
+
+        function openRoomModal() {
+          roomNicknameInput.value = state.nickname;
+          roomActiveNicknameInput.value = state.nickname;
+          roomSync.updateRoomUI();
+          roomModal.classList.remove('hidden');
+          if (!state.roomId) {
+            setTimeout(() => roomNameInput.focus(), 50);
+          }
+        }
+
+        document.getElementById('roomStatusBtn').addEventListener('click', openRoomModal);
+        document.getElementById('closeRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
+        document.getElementById('cancelRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
+        document.getElementById('doneRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
+
+        document.getElementById('randomRoomNameBtn').addEventListener('click', () => {
+          const words = ['vice', 'leonida', 'keys', 'kelly', 'grassrivers', 'gellhorn'];
+          const pick = words[Math.floor(Math.random() * words.length)];
+          const num = Math.floor(1000 + Math.random() * 9000);
+          roomNameInput.value = `${pick}-${num}`;
+        });
+
+        document.getElementById('roomJoinForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const nick = roomNicknameInput.value.trim();
+          if (nick) roomSync.updateNickname(nick);
+
+          const rawName = roomNameInput.value.trim();
+          const ok = await roomSync.joinRoom(rawName, {
+            seedLocalIfEmpty: roomSeedLocalCheckbox.checked,
+            viewOnly: false
+          });
+          if (ok) {
+            roomSync.updateRoomUI();
+          }
+        });
+
+        document.getElementById('saveActiveNicknameBtn').addEventListener('click', () => {
+          const next = roomActiveNicknameInput.value.trim();
+          if (!next) return;
+          roomSync.updateNickname(next);
+          showToast(`Apodo actualizado a "${next}"`, 'success');
+        });
+
+        document.getElementById('copyRoomLinkBtn').addEventListener('click', () => {
+          const val = document.getElementById('roomInviteLinkInput').value;
+          if (copyTextToClipboard(val)) {
+            showToast('📋 Enlace colaborativo copiado', 'success');
+          } else {
+            showToast('Selecciona y copia el enlace manualmente', 'info');
+          }
+        });
+
+        document.getElementById('copyViewOnlyLinkBtn').addEventListener('click', () => {
+          const val = document.getElementById('roomViewOnlyLinkInput').value;
+          if (copyTextToClipboard(val)) {
+            showToast('🔒 Enlace de Solo Lectura copiado', 'success');
+          } else {
+            showToast('Selecciona y copia el enlace manualmente', 'info');
+          }
+        });
+
+        document.getElementById('leaveRoomBtn').addEventListener('click', () => {
+          roomSync.leaveRoom();
+          roomModal.classList.add('hidden');
+        });
+
+        // =========================================================================
+        // 6. CUSTOM CONTEXT MARKERS + GROUPS / BRANCHES + ROUTE LINES
         // =========================================================================
         const groupLinesLayer = L.layerGroup().addTo(map);
         const markersLayer = L.layerGroup().addTo(map);
-        const pingsLayer = L.layerGroup().addTo(map);
         const markerInstances = new Map();
-
-        function renderTacticalPing(ping) {
-          const color = ping.color || '#06b6d4';
-          const sender = ping.senderName || 'Jugador';
-          const icon = L.divIcon({
-            className: '',
-            iconSize: [0, 0],
-            iconAnchor: [0, 0],
-            html: `
-              <div class="tactical-ping-wrapper" style="--ping-color:${escapeHtml(color)}">
-                <span class="tactical-ping-wave"></span>
-                <span class="tactical-ping-wave wave-2"></span>
-                <span class="tactical-ping-core"></span>
-                <div class="tactical-ping-tag">📡 ${escapeHtml(sender)}</div>
-              </div>
-            `
-          });
-
-          const marker = L.marker([ping.lat, ping.lng], { icon, interactive: false, zIndexOffset: 1200 }).addTo(pingsLayer);
-          playTacticalPingSound();
-          if (ping.senderId !== state.clientId) {
-            showToast(`📡 ${sender} lanzó un ping en el mapa`, 'info');
-          }
-          setTimeout(() => {
-            pingsLayer.removeLayer(marker);
-          }, 5200);
-        }
 
         function saveMarkers() {
           if (!state.roomId) {
@@ -1983,6 +2044,15 @@
           }
           renderMarkersOnMap();
           renderSidebarMarkers();
+        }
+
+        function getUniqueGroups() {
+          const groups = new Set();
+          state.markers.forEach((m) => {
+            const g = (m.group || '').trim();
+            if (g) groups.add(g);
+          });
+          return Array.from(groups).sort((a, b) => a.localeCompare(b, 'es'));
         }
 
         function getFilteredMarkers() {
@@ -1995,14 +2065,6 @@
               (m.group && m.group.toLowerCase().includes(q));
             return catOk && textOk;
           });
-        }
-
-        function escapeHtml(str) {
-          return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
         }
 
         function getCategoryById(id) {
@@ -2080,44 +2142,24 @@
             });
 
             const leafletMarker = L.marker([m.lat, m.lng], { icon });
+            const canEdit = !(state.roomId && state.isViewOnly);
 
             let statusActionBtn = '';
-            if (!state.isViewOnly) {
-              if (m.category === 'interior_pending') {
-                statusActionBtn = `
-                  <button onclick="window.toggleInteriorStatusById('${m.id}')"
-                    class="w-full px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition flex items-center justify-center gap-1.5">
-                    <span>✅ Marcar como Completado</span>
-                  </button>
-                `;
-              } else if (m.category === 'interior_done') {
-                statusActionBtn = `
-                  <button onclick="window.toggleInteriorStatusById('${m.id}')"
-                    class="w-full px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-xs font-semibold text-amber-200 transition flex items-center justify-center gap-1.5">
-                    <span>⚠️ Reabrir como Pendiente</span>
-                  </button>
-                `;
-              }
-            }
-
-            const authorMeta = m.createdBy
-              ? ` · Por <span class="text-slate-300 font-semibold">${escapeHtml(m.createdBy)}</span>`
-              : '';
-
-            const editControlsHtml = state.isViewOnly
-              ? `<div class="pt-1 text-[10px] text-amber-300/80 text-center font-medium">🔒 Modo solo lectura</div>`
-              : `
-                <div class="pt-1 flex items-center justify-between gap-2">
-                  <button onclick="window.deletePinById('${m.id}')"
-                    class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-[11px] font-semibold text-rose-300 transition">
-                    🗑️ Eliminar
-                  </button>
-                  <button onclick="window.editPinById('${m.id}')"
-                    class="px-3 py-1.5 rounded-lg bg-viceCyan/20 hover:bg-viceCyan/30 border border-viceCyan/40 text-[11px] font-semibold text-cyan-200 transition">
-                    ✏️ Editar Nota
-                  </button>
-                </div>
+            if (canEdit && m.category === 'interior_pending') {
+              statusActionBtn = `
+                <button onclick="window.toggleInteriorStatusById('${m.id}')"
+                  class="w-full px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition flex items-center justify-center gap-1.5">
+                  <span>✅ Marcar como Completado</span>
+                </button>
               `;
+            } else if (canEdit && m.category === 'interior_done') {
+              statusActionBtn = `
+                <button onclick="window.toggleInteriorStatusById('${m.id}')"
+                  class="w-full px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-xs font-semibold text-amber-200 transition flex items-center justify-center gap-1.5">
+                  <span>⚠️ Reabrir como Pendiente</span>
+                </button>
+              `;
+            }
 
             const groupBadgeHtml = grp ? `
               <button onclick="window.fitMarkerGroupById('${m.id}')"
@@ -2126,6 +2168,23 @@
                 <span>📂</span>
                 <span class="truncate">${escapeHtml(grp)}</span>
               </button>
+            ` : '';
+
+            const authorMeta = m.author
+              ? `<p class="text-[10px] text-cyan-300/80 mt-0.5">👤 Por ${escapeHtml(m.author)}${m.createdAt ? ' · ' + escapeHtml(m.createdAt) : ''}</p>`
+              : '';
+
+            const editActionsHtml = canEdit ? `
+              <div class="pt-1 flex items-center justify-between gap-2">
+                <button onclick="window.deletePinById('${m.id}')"
+                  class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-[11px] font-semibold text-rose-300 transition">
+                  🗑️ Eliminar
+                </button>
+                <button onclick="window.editPinById('${m.id}')"
+                  class="px-3 py-1.5 rounded-lg bg-viceCyan/20 hover:bg-viceCyan/30 border border-viceCyan/40 text-[11px] font-semibold text-cyan-200 transition">
+                  ✏️ Editar Nota
+                </button>
+              </div>
             ` : '';
 
             const popupHtml = `
@@ -2139,7 +2198,8 @@
                 </div>
                 <div>
                   <h3 class="text-sm font-bold text-white leading-snug">${escapeHtml(m.title)}</h3>
-                  <p class="text-[10px] font-mono text-slate-400 mt-0.5">Lat: ${m.lat.toFixed(4)} · Lng: ${m.lng.toFixed(4)}${authorMeta}</p>
+                  <p class="text-[10px] font-mono text-slate-400 mt-0.5">Lat: ${m.lat.toFixed(4)} · Lng: ${m.lng.toFixed(4)}</p>
+                  ${authorMeta}
                 </div>
                 <div class="bg-black/40 border border-white/10 rounded-xl p-2.5 max-h-40 overflow-y-auto">
                   <p class="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">${
@@ -2147,7 +2207,7 @@
                   }</p>
                 </div>
                 ${statusActionBtn}
-                ${editControlsHtml}
+                ${editActionsHtml}
               </div>
             `;
 
@@ -2156,7 +2216,6 @@
             markerInstances.set(m.id, leafletMarker);
           });
 
-          // Draw dashed connecting lines for any group with link mode enabled
           state.linkedGroups.forEach((grp) => {
             if (state.hiddenGroups.has(grp)) return;
             const list = visibleByGroup.get(grp);
@@ -2186,15 +2245,17 @@
           if (idx === -1) return;
           const curr = state.markers[idx];
           const nextCat = curr.category === 'interior_pending' ? 'interior_done' : 'interior_pending';
-          state.markers[idx] = { ...curr, category: nextCat, updatedBy: state.nickname };
+          const updated = { ...curr, category: nextCat, updatedAt: Date.now() };
+          state.markers[idx] = updated;
           map.closePopup();
+          saveMarkers();
           if (state.roomId) {
-            const msg = nextCat === 'interior_done'
-              ? `marcó "${curr.title}" como completado`
-              : `reabrió "${curr.title}" como pendiente`;
-            roomSync.upsertMarker(state.markers[idx], msg);
-          } else {
-            saveMarkers();
+            roomSync.upsertMarker(updated);
+            roomSync.logActivity(
+              nextCat === 'interior_done'
+                ? `completó "${updated.title}"`
+                : `reabrió "${updated.title}" como pendiente`
+            );
           }
           showToast(
             nextCat === 'interior_done'
@@ -2220,23 +2281,23 @@
           const ok = await showConfirm('¿Eliminar marcador?', `Se borrará "${m.title}" y sus notas.`);
           if (!ok) return;
           state.markers = state.markers.filter(item => item.id !== id);
+          saveMarkers();
           if (state.roomId) {
-            roomSync.removeMarker(id, m.title);
-          } else {
-            saveMarkers();
+            roomSync.deleteMarker(id);
+            roomSync.logActivity(`eliminó el pin "${m.title}"`);
           }
           showToast('Marcador eliminado');
         };
 
         // =========================================================================
-        // 7. TOOL MODES, RIGHT-CLICK PAN IN PAINT MODE & POINTER INTERACTIONS
+        // 7. TOOL MODES, RIGHT-CLICK PAN & MOBILE TOUCH GESTURES (1 vs 2 FINGERS)
         // =========================================================================
         const fogControlsGroup = document.getElementById('fogControlsGroup');
         const hudRightPanHint = document.getElementById('hudRightPanHint');
         const hudRightPanText = document.getElementById('hudRightPanText');
 
         function setActiveTool(tool) {
-          if (tool !== 'pan' && checkReadOnlyGuard()) {
+          if (tool !== 'pan' && tool !== 'ping' && checkReadOnlyGuard()) {
             tool = 'pan';
           }
           state.tool = tool;
@@ -2244,6 +2305,13 @@
           state.isRightClickPanning = false;
           state.lastPaintLatLng = null;
           state.lastRightPanClient = null;
+          state.isTwoFingerGesture = false;
+          state.activeTouchPoints.clear();
+          if (state.touchPaintTimer) {
+            clearTimeout(state.touchPaintTimer);
+            state.touchPaintTimer = null;
+          }
+          state.touchPaintPending = null;
 
           document.querySelectorAll('.tool-btn').forEach((btn) => {
             const active = btn.dataset.tool === tool;
@@ -2267,6 +2335,8 @@
           fogControlsGroup.classList.toggle('hidden', !isFogTool);
           fogControlsGroup.classList.toggle('flex', isFogTool);
 
+          mapWorkspace.classList.toggle('paint-touch-lock', isFogTool);
+
           hudRightPanHint.classList.toggle('hidden', !isFogTool);
           hudRightPanText.classList.toggle('hidden', !isFogTool);
           hudRightPanHint.classList.toggle('sm:inline', isFogTool);
@@ -2274,17 +2344,43 @@
 
           if (isFogTool) {
             map.dragging.disable();
+            if (map.touchZoom) map.touchZoom.disable();
             document.getElementById('map').style.cursor = 'none';
             brushCursorRing.style.borderColor = tool === 'eraseFog' ? '#06b6d4' : '#a855f7';
             brushCursorRing.style.backgroundColor = tool === 'eraseFog' ? 'rgba(6,182,212,0.12)' : 'rgba(168,85,247,0.15)';
           } else {
             map.dragging.enable();
+            if (map.touchZoom) map.touchZoom.enable();
             brushCursorRing.classList.add('hidden');
-            document.getElementById('map').style.cursor = tool === 'pin' ? 'crosshair' : 'grab';
+            document.getElementById('map').style.cursor = (tool === 'pin' || tool === 'ping') ? 'crosshair' : 'grab';
           }
         }
 
-        // Prevent context menu while in paint tools so right-click can pan cleanly
+        function getTwoFingerMetrics() {
+          const pts = Array.from(state.activeTouchPoints.values());
+          if (pts.length < 2) return null;
+          const a = pts[0];
+          const b = pts[1];
+          return {
+            mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+            dist: Math.hypot(b.x - a.x, b.y - a.y)
+          };
+        }
+
+        function commitPendingTouchPaint() {
+          if (!state.touchPaintPending || state.isTwoFingerGesture) return;
+          const pending = state.touchPaintPending;
+          state.touchPaintPending = null;
+          if (state.touchPaintTimer) {
+            clearTimeout(state.touchPaintTimer);
+            state.touchPaintTimer = null;
+          }
+          state.isPaintingFog = true;
+          state.lastPaintLatLng = pending.latlng;
+          addFogStrokeAtLatLng(pending.latlng, pending.mode);
+          fogController.scheduleRedraw();
+        }
+
         mapWorkspace.addEventListener('contextmenu', (e) => {
           if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
             e.preventDefault();
@@ -2299,7 +2395,52 @@
 
           document.getElementById('hudCoords').textContent = `Lat: ${latlng.lat.toFixed(4)}, Lng: ${latlng.lng.toFixed(4)}`;
 
-          // Right-click panning while in paint mode
+          // Touch gestures in Paint Mode: 1 finger paints, 2 fingers pan & pinch-zoom
+          if (e.pointerType === 'touch' && state.activeTouchPoints.has(e.pointerId)) {
+            state.activeTouchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (state.isTwoFingerGesture && state.activeTouchPoints.size >= 2) {
+              const metrics = getTwoFingerMetrics();
+              if (metrics && state.twoFingerPrevMid && state.twoFingerPrevDist) {
+                const dx = state.twoFingerPrevMid.x - metrics.mid.x;
+                const dy = state.twoFingerPrevMid.y - metrics.mid.y;
+                if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+                  map.panBy([dx, dy], { animate: false });
+                }
+
+                const ratio = metrics.dist / Math.max(10, state.twoFingerPrevDist);
+                if (ratio > 1.18 || ratio < 0.85) {
+                  const deltaZ = ratio > 1 ? 1 : -1;
+                  const nextZoom = Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), map.getZoom() + deltaZ));
+                  if (nextZoom !== map.getZoom()) {
+                    const aroundLatLng = map.containerPointToLatLng([metrics.mid.x - rect.left, metrics.mid.y - rect.top]);
+                    map.setZoomAround(aroundLatLng, nextZoom, { animate: false });
+                  }
+                  state.twoFingerPrevDist = metrics.dist;
+                }
+                state.twoFingerPrevMid = metrics.mid;
+              }
+              return;
+            }
+
+            if (state.touchPaintPending) {
+              const moved = Math.hypot(e.clientX - state.touchPaintPending.x, e.clientY - state.touchPaintPending.y);
+              if (moved >= 5) {
+                commitPendingTouchPaint();
+              } else {
+                return;
+              }
+            }
+
+            if (state.isPaintingFog && state.lastPaintLatLng) {
+              const mode = state.tool === 'eraseFog' ? 'erase' : 'paint';
+              strokeFogBetweenLatLngs(state.lastPaintLatLng, latlng, mode);
+              state.lastPaintLatLng = latlng;
+            }
+            return;
+          }
+
+          // Right-click panning while in paint mode (desktop mouse)
           if (state.isRightClickPanning && state.lastRightPanClient) {
             const dx = state.lastRightPanClient.x - e.clientX;
             const dy = state.lastRightPanClient.y - e.clientY;
@@ -2309,11 +2450,13 @@
           }
 
           if (state.tool === 'eraseFog' || state.tool === 'paintFog') {
-            brushCursorRing.classList.remove('hidden');
-            brushCursorRing.style.left = e.clientX + 'px';
-            brushCursorRing.style.top = e.clientY + 'px';
-            brushCursorRing.style.width = (state.brushSize * 2) + 'px';
-            brushCursorRing.style.height = (state.brushSize * 2) + 'px';
+            if (e.pointerType !== 'touch') {
+              brushCursorRing.classList.remove('hidden');
+              brushCursorRing.style.left = e.clientX + 'px';
+              brushCursorRing.style.top = e.clientY + 'px';
+              brushCursorRing.style.width = (state.brushSize * 2) + 'px';
+              brushCursorRing.style.height = (state.brushSize * 2) + 'px';
+            }
 
             if (state.isPaintingFog && state.lastPaintLatLng) {
               const mode = state.tool === 'eraseFog' ? 'erase' : 'paint';
@@ -2332,7 +2475,7 @@
             return;
           }
 
-          // Middle-click -> Tactical Live Ping ("¡Mira aquí!")
+          // Middle-click -> Tactical Live Ping
           if (e.button === 1) {
             e.preventDefault();
             if (state.roomId && state.isViewOnly) {
@@ -2348,7 +2491,44 @@
           const isFogTool = state.tool === 'eraseFog' || state.tool === 'paintFog';
           if (!isFogTool) return;
 
-          // Right click -> pan map smoothly
+          // Touch handling in Paint Mode: 1 finger paints, 2 fingers pan/pinch-zoom
+          if (e.pointerType === 'touch') {
+            state.activeTouchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (state.activeTouchPoints.size >= 2) {
+              if (state.touchPaintTimer) {
+                clearTimeout(state.touchPaintTimer);
+                state.touchPaintTimer = null;
+              }
+              state.touchPaintPending = null;
+              if (state.isPaintingFog) {
+                state.isPaintingFog = false;
+                state.lastPaintLatLng = null;
+                if (state.roomId) {
+                  roomSync.flushPendingFogBatch();
+                } else {
+                  saveFogStrokes();
+                }
+              }
+              state.isTwoFingerGesture = true;
+              const metrics = getTwoFingerMetrics();
+              state.twoFingerPrevMid = metrics ? metrics.mid : null;
+              state.twoFingerPrevDist = metrics ? metrics.dist : null;
+              return;
+            }
+
+            const rect = map.getContainer().getBoundingClientRect();
+            const latlng = map.containerPointToLatLng([e.clientX - rect.left, e.clientY - rect.top]);
+            const mode = state.tool === 'eraseFog' ? 'erase' : 'paint';
+            state.isTwoFingerGesture = false;
+            state.touchPaintPending = { latlng, mode, x: e.clientX, y: e.clientY };
+            state.touchPaintTimer = setTimeout(() => {
+              commitPendingTouchPaint();
+            }, 55);
+            return;
+          }
+
+          // Right click -> pan map smoothly (desktop mouse)
           if (e.button === 2) {
             e.preventDefault();
             state.isRightClickPanning = true;
@@ -2358,7 +2538,7 @@
             return;
           }
 
-          // Left click -> paint or erase fog
+          // Left click -> paint or erase fog (desktop mouse)
           if (e.button === 0) {
             const rect = map.getContainer().getBoundingClientRect();
             const latlng = map.containerPointToLatLng([e.clientX - rect.left, e.clientY - rect.top]);
@@ -2370,7 +2550,27 @@
           }
         });
 
-        window.addEventListener('pointerup', (e) => {
+        function handlePointerFinish(e) {
+          if (e.pointerType === 'touch') {
+            const wasPendingSingleTap = Boolean(state.touchPaintPending) && !state.isTwoFingerGesture && state.activeTouchPoints.size <= 1;
+            if (wasPendingSingleTap) {
+              commitPendingTouchPaint();
+            }
+            state.activeTouchPoints.delete(e.pointerId);
+            if (state.activeTouchPoints.size < 2) {
+              state.twoFingerPrevMid = null;
+              state.twoFingerPrevDist = null;
+            }
+            if (state.activeTouchPoints.size === 0) {
+              state.isTwoFingerGesture = false;
+              if (state.touchPaintTimer) {
+                clearTimeout(state.touchPaintTimer);
+                state.touchPaintTimer = null;
+              }
+              state.touchPaintPending = null;
+            }
+          }
+
           if (state.isRightClickPanning) {
             state.isRightClickPanning = false;
             state.lastRightPanClient = null;
@@ -2390,11 +2590,13 @@
               saveFogStrokes();
             }
           }
-        });
+        }
+
+        window.addEventListener('pointerup', handlePointerFinish);
+        window.addEventListener('pointercancel', handlePointerFinish);
 
         map.on('click', (e) => {
-          // Alt + Click -> Tactical Live Ping ("¡Mira aquí!")
-          if (e.originalEvent.altKey) {
+          if (e.originalEvent.altKey || state.tool === 'ping') {
             if (state.roomId && state.isViewOnly) {
               showToast('🔒 En modo solo lectura no puedes enviar pings a la sala', 'info');
               return;
@@ -2410,7 +2612,7 @@
         });
 
         // =========================================================================
-        // 8. MODALS: CREATE / EDIT MARKER (WITH GROUPS), TILE SETTINGS & ROOMS
+        // 8. MODALS: CREATE / EDIT MARKER (WITH GROUPS) & TILE SETTINGS
         // =========================================================================
         const markerModal = document.getElementById('markerModal');
         const pinTitleInput = document.getElementById('pinTitleInput');
@@ -2530,39 +2732,44 @@
 
           const group = pinGroupInput.value.trim();
           const notes = pinNotesInput.value.trim();
+          const nowTs = Date.now();
 
           if (state.editingMarkerId) {
             const idx = state.markers.findIndex(m => m.id === state.editingMarkerId);
             if (idx !== -1) {
-              state.markers[idx] = {
+              const updated = {
                 ...state.markers[idx],
                 title,
                 group,
                 category: state.selectedModalCategory,
                 notes,
-                updatedBy: state.roomId ? state.nickname : state.markers[idx].updatedBy
+                updatedAt: nowTs
               };
+              state.markers[idx] = updated;
               if (state.roomId) {
-                roomSync.upsertMarker(state.markers[idx], `editó "${title}"`);
+                roomSync.upsertMarker(updated);
+                roomSync.logActivity(`editó "${title}"`);
               }
             }
             showToast('Marcador actualizado', 'success');
           } else {
             const newPin = {
-              id: 'pin_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+              id: 'pin_' + nowTs + '_' + Math.random().toString(36).slice(2, 6),
               lat: state.pendingLatLng.lat,
               lng: state.pendingLatLng.lng,
               title,
               group,
               category: state.selectedModalCategory,
               notes,
-              createdBy: state.roomId ? state.nickname : '',
-              createdTs: Date.now(),
+              author: state.roomId ? state.nickname : '',
+              createdTs: nowTs,
+              updatedAt: nowTs,
               createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
             };
             state.markers.unshift(newPin);
             if (state.roomId) {
-              roomSync.upsertMarker(newPin, `añadió "${title}"`);
+              roomSync.upsertMarker(newPin);
+              roomSync.logActivity(`añadió "${title}"`);
             }
             showToast(group ? `Guardado en la rama "${group}"` : 'Marcador guardado con su contexto', 'success');
           }
@@ -2573,9 +2780,7 @@
           }
 
           markerModal.classList.add('hidden');
-          if (!state.roomId) {
-            saveMarkers();
-          }
+          saveMarkers();
         });
 
         document.getElementById('closeMarkerModalBtn').addEventListener('click', () => markerModal.classList.add('hidden'));
@@ -2620,77 +2825,6 @@
           showToast('Capa de teselas actualizada', 'success');
         });
 
-        // Online Room Modal Events
-        const roomModal = document.getElementById('roomModal');
-        const roomNameInput = document.getElementById('roomNameInput');
-        const roomNicknameInput = document.getElementById('roomNicknameInput');
-        const roomActiveNicknameInput = document.getElementById('roomActiveNicknameInput');
-        const roomSeedLocalCheckbox = document.getElementById('roomSeedLocalCheckbox');
-
-        function openRoomModal() {
-          roomSync.updateRoomUI();
-          roomModal.classList.remove('hidden');
-          if (!state.roomId) {
-            setTimeout(() => roomNameInput.focus(), 50);
-          }
-        }
-
-        document.getElementById('roomStatusBtn').addEventListener('click', openRoomModal);
-        document.getElementById('closeRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
-        document.getElementById('cancelRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
-        document.getElementById('doneRoomModalBtn').addEventListener('click', () => roomModal.classList.add('hidden'));
-
-        document.getElementById('randomRoomNameBtn').addEventListener('click', () => {
-          const rand = 'leonida-' + Math.random().toString(36).slice(2, 7);
-          roomNameInput.value = rand;
-        });
-
-        document.getElementById('saveActiveNicknameBtn').addEventListener('click', () => {
-          const val = roomActiveNicknameInput.value.trim();
-          if (!val) {
-            showToast('Escribe un apodo válido', 'error');
-            return;
-          }
-          roomSync.updateNickname(val);
-          showToast(`Apodo actualizado a "${val}"`, 'success');
-        });
-
-        document.getElementById('roomJoinForm').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const nick = roomNicknameInput.value.trim();
-          if (nick) {
-            roomSync.updateNickname(nick);
-          }
-          const joined = await roomSync.joinRoom(roomNameInput.value, roomSeedLocalCheckbox.checked, false);
-          if (joined) {
-            roomNameInput.value = '';
-          }
-        });
-
-        function copyInputToClipboard(inputEl, successMsg) {
-          inputEl.select();
-          inputEl.setSelectionRange(0, 99999);
-          try {
-            document.execCommand('copy');
-            showToast(successMsg, 'success');
-          } catch {
-            showToast('Copia el enlace manualmente con Ctrl+C', 'info');
-          }
-        }
-
-        document.getElementById('copyRoomLinkBtn').addEventListener('click', () => {
-          copyInputToClipboard(document.getElementById('roomInviteLinkInput'), 'Enlace colaborativo copiado');
-        });
-
-        document.getElementById('copyViewOnlyLinkBtn').addEventListener('click', () => {
-          copyInputToClipboard(document.getElementById('roomViewOnlyLinkInput'), 'Enlace de Solo Lectura copiado');
-        });
-
-        document.getElementById('leaveRoomBtn').addEventListener('click', () => {
-          roomSync.leaveRoom(true);
-          roomModal.classList.add('hidden');
-        });
-
         // =========================================================================
         // 9. RIGHT SIDEBAR: FILTERS, GROUPED BRANCHES, QUICK COMPLETE & DELETE
         // =========================================================================
@@ -2733,9 +2867,21 @@
         function buildSidebarCardHtml(m) {
           const cat = getCategoryById(m.category);
           const snippet = m.notes && m.notes.trim() ? m.notes.trim() : 'Sin notas adicionales...';
-          const quickCompleteBtn = m.category === 'interior_pending'
+          const canEdit = !(state.roomId && state.isViewOnly);
+
+          const quickCompleteBtn = (canEdit && m.category === 'interior_pending')
             ? `<button type="button" data-complete-id="${m.id}" class="sidebar-complete-btn px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-400/35 text-[10px] font-bold text-emerald-200 transition" title="Marcar interior como completado">✅ Completar</button>`
             : '';
+
+          const deleteBtnHtml = canEdit ? `
+            <button type="button" data-delete-id="${m.id}" class="sidebar-delete-btn p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/15 transition shrink-0" title="Eliminar marcador">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          ` : '';
+
+          const authorTag = m.author ? `<span class="text-[10px] text-cyan-300/75 truncate">👤 ${escapeHtml(m.author)}</span>` : '';
 
           return `
             <div data-id="${m.id}" class="sidebar-pin-card group cursor-pointer p-3 rounded-xl bg-slatePanel/80 hover:bg-slatePanel border border-white/5 hover:border-viceCyan/40 transition space-y-1.5">
@@ -2746,15 +2892,14 @@
                   </span>
                   <h4 class="text-xs font-bold text-white truncate group-hover:text-viceCyan transition">${escapeHtml(m.title)}</h4>
                 </div>
-                <button type="button" data-delete-id="${m.id}" class="sidebar-delete-btn p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/15 transition shrink-0" title="Eliminar marcador">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                ${deleteBtnHtml}
               </div>
               <p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed pl-8">${escapeHtml(snippet)}</p>
-              <div class="flex items-center justify-between pl-8 pt-0.5">
-                <span class="text-[10px] font-mono text-slate-500">${m.lat.toFixed(2)}, ${m.lng.toFixed(2)}</span>
+              <div class="flex items-center justify-between gap-2 pl-8 pt-0.5">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-[10px] font-mono text-slate-500 shrink-0">${m.lat.toFixed(2)}, ${m.lng.toFixed(2)}</span>
+                  ${authorTag}
+                </div>
                 ${quickCompleteBtn}
               </div>
             </div>
@@ -2866,9 +3011,11 @@
           list.querySelectorAll('.group-add-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
               e.stopPropagation();
+              if (checkReadOnlyGuard()) return;
               const g = btn.dataset.addGroup;
               setActiveGroupForNewPin(g);
               setActiveTool('pin');
+              if (window.innerWidth < 768) setSidebarOpen(false);
               showToast(`Haz clic en el mapa para añadir otro pin a "${g}"`, 'info');
             });
           });
@@ -2890,6 +3037,7 @@
           list.querySelectorAll('.group-fit-btn').forEach((btn) => {
             btn.addEventListener('click', (e) => {
               e.stopPropagation();
+              if (window.innerWidth < 768) setSidebarOpen(false);
               fitGroupOnMap(btn.dataset.fitGroup);
             });
           });
@@ -2918,6 +3066,7 @@
                 renderMarkersOnMap();
                 renderSidebarMarkers();
               }
+              if (window.innerWidth < 768) setSidebarOpen(false);
               map.flyTo([m.lat, m.lng], Math.max(map.getZoom(), 16), { duration: 0.7 });
               setTimeout(() => {
                 const inst = markerInstances.get(m.id);
@@ -2950,7 +3099,7 @@
         map.on('zoom viewreset', updateZoomHudAndLabels);
 
         // =========================================================================
-        // 10. TOOLBAR, SIDEBAR TOGGLE, BACKUPS & HOTKEYS
+        // 10. TOOLBAR, MOBILE DRAWER, BACKUPS & KEYBOARD HOTKEYS
         // =========================================================================
         document.querySelectorAll('.tool-btn').forEach((btn) => {
           btn.addEventListener('click', () => setActiveTool(btn.dataset.tool));
@@ -2964,27 +3113,57 @@
         });
 
         const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
         const openSidebarBtn = document.getElementById('openSidebarBtn');
-        document.getElementById('closeSidebarBtn').addEventListener('click', () => {
-          sidebar.classList.add('-mr-80', 'sm:-mr-96');
-          openSidebarBtn.classList.remove('hidden');
-          setTimeout(() => {
-            map.invalidateSize();
-            fogController.scheduleRedraw();
-          }, 310);
-        });
-        openSidebarBtn.addEventListener('click', () => {
-          sidebar.classList.remove('-mr-80', 'sm:-mr-96');
-          openSidebarBtn.classList.add('hidden');
-          setTimeout(() => {
-            map.invalidateSize();
-            fogController.scheduleRedraw();
-          }, 310);
+        const topToolbar = document.getElementById('topToolbar');
+        const collapseToolbarBtn = document.getElementById('collapseToolbarBtn');
+        const expandToolbarBtn = document.getElementById('expandToolbarBtn');
+
+        function setToolbarCollapsed(collapsed) {
+          state.toolbarCollapsed = Boolean(collapsed);
+          topToolbar.classList.toggle('hidden', state.toolbarCollapsed);
+          expandToolbarBtn.classList.toggle('hidden', !state.toolbarCollapsed);
+        }
+
+        collapseToolbarBtn.addEventListener('click', () => setToolbarCollapsed(true));
+        expandToolbarBtn.addEventListener('click', () => setToolbarCollapsed(false));
+
+        function setSidebarOpen(open, animateMapResize = true) {
+          state.sidebarOpen = Boolean(open);
+          const isMobile = window.innerWidth < 768;
+
+          if (state.sidebarOpen) {
+            sidebar.classList.remove('translate-x-full', 'md:-mr-80', 'lg:-mr-96', 'pointer-events-none');
+            openSidebarBtn.classList.add('hidden');
+            sidebarBackdrop.classList.toggle('hidden', !isMobile);
+          } else {
+            sidebar.classList.add('translate-x-full', 'md:-mr-80', 'lg:-mr-96', 'pointer-events-none');
+            openSidebarBtn.classList.remove('hidden');
+            sidebarBackdrop.classList.add('hidden');
+          }
+
+          if (animateMapResize) {
+            setTimeout(() => {
+              map.invalidateSize();
+              fogController.scheduleRedraw();
+            }, 310);
+          }
+        }
+
+        document.getElementById('closeSidebarBtn').addEventListener('click', () => setSidebarOpen(false));
+        openSidebarBtn.addEventListener('click', () => setSidebarOpen(true));
+        sidebarBackdrop.addEventListener('click', () => setSidebarOpen(false));
+
+        window.addEventListener('resize', () => {
+          const isMobile = window.innerWidth < 768;
+          sidebarBackdrop.classList.toggle('hidden', !(state.sidebarOpen && isMobile));
         });
 
         document.getElementById('sidebarNewPinBtn').addEventListener('click', () => {
+          if (checkReadOnlyGuard()) return;
           setActiveGroupForNewPin('');
           setActiveTool('pin');
+          if (window.innerWidth < 768) setSidebarOpen(false);
           showToast('Haz clic sobre cualquier edificio o zona para guardar un pin');
         });
 
@@ -3012,7 +3191,7 @@
         // Export / Import JSON Backup
         document.getElementById('exportBackupBtn').addEventListener('click', () => {
           const backup = {
-            version: 6,
+            version: 7,
             exportedAt: new Date().toISOString(),
             tileUrl: state.tileUrl,
             tileTms: state.tileTms,
@@ -3050,16 +3229,17 @@
               }
               if (Array.isArray(data.markers)) {
                 state.markers = migrateMarkers(data.markers);
-                if (state.roomId) {
-                  roomSync.replaceAllMarkers(state.markers);
-                } else {
-                  saveMarkers();
-                }
+                saveMarkers();
+                if (state.roomId) roomSync.replaceAllMarkers(state.markers);
               }
               if (Array.isArray(data.fogStrokes)) {
                 state.fogStrokes = data.fogStrokes;
                 fogController.setStrokes(state.fogStrokes);
-                saveFogStrokes();
+                if (state.roomId) {
+                  roomSync.replaceAllFogStrokes(state.fogStrokes);
+                } else {
+                  saveFogStrokes();
+                }
               }
               showToast('Marcadores, ramas, difuminado y ajustes restaurados', 'success');
             } catch {
@@ -3093,6 +3273,8 @@
             setActiveTool('eraseFog');
           } else if (e.key === '4') {
             setActiveTool('paintFog');
+          } else if (e.key === '5') {
+            setActiveTool('ping');
           } else if (e.key === '[') {
             state.brushSize = Math.max(16, state.brushSize - 12);
             brushSizeSlider.value = state.brushSize;
@@ -3110,14 +3292,17 @@
         renderCategoryFilters();
         renderModalCategories();
         setActiveTool('pan');
+        setSidebarOpen(window.innerWidth >= 768, false);
         updateFogModeUI();
         updateZoomHudAndLabels();
         roomSync.updateRoomUI();
 
-        const initialUrlRoom = getRoomIdFromUrl();
-        const initialViewOnly = getViewOnlyFromUrl();
-        if (initialUrlRoom) {
-          roomSync.joinRoom(initialUrlRoom, false, initialViewOnly);
+        const urlRoomInfo = roomSync.parseRoomFromUrl();
+        if (urlRoomInfo.roomId) {
+          roomSync.joinRoom(urlRoomInfo.roomId, {
+            seedLocalIfEmpty: false,
+            viewOnly: urlRoomInfo.isViewOnly
+          });
         } else {
           if (localStorage.getItem(FOG_STROKES_KEY) === null) {
             saveFogStrokes();
