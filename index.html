@@ -221,6 +221,63 @@
       animation: pendingPulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
     }
 
+    /* Tactical Live Ping Animation */
+    @keyframes tacticalPingWave {
+      0% {
+        transform: translate(-50%, -50%) scale(0.35);
+        opacity: 0.95;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(3.2);
+        opacity: 0;
+      }
+    }
+    .tactical-ping-wrapper {
+      position: relative;
+      pointer-events: none;
+    }
+    .tactical-ping-wave {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 9999px;
+      border: 3px solid var(--ping-color, #06b6d4);
+      background: rgba(6, 182, 212, 0.16);
+      animation: tacticalPingWave 1.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+    .tactical-ping-wave.wave-2 {
+      animation-delay: 0.55s;
+    }
+    .tactical-ping-core {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      transform: translate(-50%, -50%);
+      background: var(--ping-color, #06b6d4);
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 14px var(--ping-color, #06b6d4);
+    }
+    .tactical-ping-tag {
+      position: absolute;
+      top: -28px;
+      left: 0;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid var(--ping-color, #06b6d4);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      white-space: nowrap;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+    }
+
     /* Glassmorphism panels */
     .glass-panel {
       background: rgba(15, 23, 42, 0.88);
@@ -391,6 +448,8 @@
           <span id="hudCoords">Lat: 0.7030, Lng: -0.7030</span>
           <span class="hidden sm:inline text-white/20">|</span>
           <span class="hidden sm:inline text-slate-400 font-sans">Shift+Clic pin rápido</span>
+          <span class="hidden md:inline text-white/20">|</span>
+          <span class="hidden md:inline text-emerald-300/90 font-sans">Alt+Clic / Rueda: Ping</span>
           <span id="hudRightPanHint" class="hidden text-white/20">|</span>
           <span id="hudRightPanText" class="hidden text-cyan-300/90 font-sans">Clic der.: mover mapa</span>
         </div>
@@ -447,6 +506,12 @@
           <strong id="activeGroupBannerName" class="text-white"></strong>
         </div>
         <button id="clearActiveGroupBtn" type="button" class="text-cyan-300 hover:text-white px-1.5 py-0.5 rounded bg-black/30 shrink-0" title="Dejar de añadir a esta rama">✕</button>
+      </div>
+
+      <!-- Read-Only Mode Banner -->
+      <div id="viewOnlyBanner" class="hidden px-3.5 py-2 bg-amber-500/15 border-b border-amber-400/35 flex items-center justify-between gap-2 text-[11px] text-amber-100">
+        <span class="font-semibold">🔒 Modo Solo Lectura (espectador)</span>
+        <span class="text-[10px] text-amber-200/80">Edición bloqueada</span>
       </div>
 
       <!-- Marker Stats & Quick Add -->
@@ -627,8 +692,8 @@
 
   <!-- Modal: Online Co-op Room -->
   <div id="roomModal" class="hidden fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="glass-panel w-full max-w-md rounded-2xl border border-white/15 shadow-2xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/50 to-cyan-950/50">
+    <div class="glass-panel w-full max-w-md rounded-2xl border border-white/15 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-emerald-950/50 to-cyan-950/50 shrink-0">
         <h2 class="text-sm font-bold text-white flex items-center gap-2">
           <span>🌐</span>
           <span>Mapa Conjunto (Salas Online)</span>
@@ -640,24 +705,47 @@
         </button>
       </div>
 
-      <div class="p-5 space-y-4">
+      <div class="p-5 space-y-4 overflow-y-auto">
         <!-- Active Room Panel (shown when connected) -->
         <div id="roomActivePanel" class="hidden space-y-3.5">
-          <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-400/35 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+          <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-400/35 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span id="roomSyncStatusText" class="text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Sincronizando en vivo
               </span>
               <span id="roomActiveNameBadge" class="px-2 py-0.5 rounded-lg bg-black/40 text-xs font-mono font-bold text-white"></span>
             </div>
             <p class="text-[11px] text-slate-300 leading-relaxed">
-              Todos los pines, ramas y zonas descubiertas se sincronizan al instante con cualquiera que abra este enlace.
+              Usa <kbd class="px-1 py-0.5 rounded bg-black/40 text-cyan-200 font-mono text-[10px]">Alt + Clic</kbd> o el botón central del ratón para lanzar un ping táctico visible para toda la sala.
             </p>
           </div>
 
+          <!-- Online Users Presence List -->
           <div class="space-y-1.5">
-            <label class="block text-xs font-semibold text-slate-300">Enlace de invitación para tus amigos</label>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-300">Jugadores en sala</span>
+              <span id="roomOnlineCountBadge" class="text-[11px] font-mono text-emerald-300 font-bold">1 en sala</span>
+            </div>
+            <div id="roomOnlineUsersList" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slateDark/80 border border-white/10 min-h-[38px]"></div>
+          </div>
+
+          <!-- Editable Nickname while inside room -->
+          <div class="space-y-1.5">
+            <label for="roomActiveNicknameInput" class="block text-xs font-semibold text-slate-300">Tu apodo en esta sala</label>
+            <div class="flex gap-2">
+              <input id="roomActiveNicknameInput" type="text" maxlength="20" placeholder="Ej: Alex"
+                class="flex-1 bg-slateDark border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-viceCyan transition" />
+              <button type="button" id="saveActiveNicknameBtn"
+                class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white shrink-0 transition">
+                Guardar
+              </button>
+            </div>
+          </div>
+
+          <!-- Collaborative Invite Link -->
+          <div id="roomEditLinkContainer" class="space-y-1.5">
+            <label class="block text-xs font-semibold text-slate-300">Enlace colaborativo (pueden editar)</label>
             <div class="flex gap-2">
               <input id="roomInviteLinkInput" type="text" readonly
                 class="flex-1 bg-slateDark border border-white/15 rounded-xl px-3 py-2 text-[11px] font-mono text-cyan-200 focus:outline-none" />
@@ -668,7 +756,23 @@
             </div>
           </div>
 
-          <div class="pt-1 flex items-center justify-between gap-2 border-t border-white/10">
+          <!-- Read-Only Invite Link -->
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span>🔒 Enlace Solo Lectura</span>
+              <span class="text-[10px] font-normal text-slate-400">(ver sin editar)</span>
+            </label>
+            <div class="flex gap-2">
+              <input id="roomViewOnlyLinkInput" type="text" readonly
+                class="flex-1 bg-slateDark border border-white/15 rounded-xl px-3 py-2 text-[11px] font-mono text-amber-200 focus:outline-none" />
+              <button type="button" id="copyViewOnlyLinkBtn"
+                class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-bold shrink-0 transition">
+                📋 Copiar
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2 flex items-center justify-between gap-2 border-t border-white/10">
             <button type="button" id="leaveRoomBtn"
               class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/35 text-xs font-semibold text-rose-200 transition">
               🚪 Salir a Modo Local
@@ -685,6 +789,12 @@
           <p class="text-xs text-slate-300 leading-relaxed">
             Crea o únete a una sala con un nombre secreto. Comparte el enlace <span class="font-mono text-viceCyan">?room=nombre</span> con tus amigos para explorar Leonida juntos en tiempo real.
           </p>
+
+          <div class="space-y-1.5">
+            <label for="roomNicknameInput" class="block text-xs font-semibold text-slate-300">Tu apodo (visible para tus amigos)</label>
+            <input id="roomNicknameInput" type="text" maxlength="20" placeholder="Ej: Alex, Putrinski..."
+              class="w-full bg-slateDark border border-white/15 rounded-xl px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-viceCyan transition" />
+          </div>
 
           <div class="space-y-1.5">
             <label for="roomNameInput" class="block text-xs font-semibold text-slate-300">Nombre o código de la sala</label>
@@ -911,6 +1021,12 @@
         const savedBlurMode = localStorage.getItem('leonida_fog_blur_mode');
         const initialBlurMode = ['soft', 'intense', 'none'].includes(savedBlurMode) ? savedBlurMode : 'soft';
 
+        const USER_COLORS = ['#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#a855f7', '#38bdf8', '#fb7185'];
+        const storedNick = (localStorage.getItem('leonida_coop_nickname') || '').trim();
+        const fallbackNick = 'Explorador-' + Math.floor(100 + Math.random() * 900);
+        const storedColor = localStorage.getItem('leonida_coop_color') || USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+        localStorage.setItem('leonida_coop_color', storedColor);
+
         const state = {
           tileUrl: migratedUrl,
           tileTms: localStorage.getItem('leonida_tile_tms') === 'true',
@@ -934,8 +1050,13 @@
           activeGroupForNewPin: '',
 
           // Online Co-op Room State
+          clientId: 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          nickname: storedNick || fallbackNick,
+          userColor: storedColor,
           roomId: null,
           roomConnected: false,
+          isViewOnly: false,
+          onlineUsers: [],
           pendingFogBatch: [],
 
           isPaintingFog: false,
@@ -944,6 +1065,16 @@
           lastRightPanClient: null,
         };
 
+        function checkReadOnlyGuard() {
+          if (state.roomId && state.isViewOnly) {
+            showToast('🔒 Modo solo lectura: no puedes modificar esta sala', 'info');
+            return true;
+          }
+          return false;
+        }
+
+        // =========================================================================
+        // 3B. FIREBASE REALTIME DATABASE — ONLINE ROOMS (?room=nombre&view=1)
         // =========================================================================
         // 3B. FIREBASE REALTIME DATABASE — ONLINE ROOMS (?room=nombre)
         // =========================================================================
@@ -990,25 +1121,46 @@
           return '';
         }
 
-        function buildRoomInviteUrl(roomId) {
+        function getViewOnlyFromUrl() {
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const v = (params.get('view') || '').toLowerCase();
+            return v === '1' || v === 'true' || v === 'readonly';
+          } catch {
+            return false;
+          }
+        }
+
+        function buildRoomInviteUrl(roomId, viewOnly = false) {
           try {
             const url = new URL(window.location.href);
             url.hash = '';
             url.searchParams.set('room', roomId);
+            if (viewOnly) {
+              url.searchParams.set('view', '1');
+            } else {
+              url.searchParams.delete('view');
+            }
             return url.toString();
           } catch {
-            return `?room=${encodeURIComponent(roomId)}`;
+            return `?room=${encodeURIComponent(roomId)}${viewOnly ? '&view=1' : ''}`;
           }
         }
 
-        function syncBrowserUrlWithRoom(roomId) {
+        function syncBrowserUrlWithRoom(roomId, viewOnly = false) {
           try {
             const url = new URL(window.location.href);
             url.hash = '';
             if (roomId) {
               url.searchParams.set('room', roomId);
+              if (viewOnly) {
+                url.searchParams.set('view', '1');
+              } else {
+                url.searchParams.delete('view');
+              }
             } else {
               url.searchParams.delete('room');
+              url.searchParams.delete('view');
             }
             window.history.replaceState({}, '', url.toString());
           } catch {
@@ -1016,10 +1168,81 @@
           }
         }
 
+        // Subtle synthesized sonar ping sound using Web Audio API (no external files)
+        let pingAudioCtx = null;
+        function playTacticalPingSound() {
+          try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            if (!pingAudioCtx) pingAudioCtx = new AudioCtx();
+            if (pingAudioCtx.state === 'suspended') pingAudioCtx.resume();
+
+            const now = pingAudioCtx.currentTime;
+            const osc = pingAudioCtx.createOscillator();
+            const gain = pingAudioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.exponentialRampToValueAtTime(1320, now + 0.09);
+            osc.frequency.exponentialRampToValueAtTime(660, now + 0.28);
+
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+
+            osc.connect(gain);
+            gain.connect(pingAudioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.36);
+          } catch {
+            // Ignore autoplay restriction errors
+          }
+        }
+
         const roomSync = (() => {
           let activeRoomRef = null;
           let markersRef = null;
           let fogBatchesRef = null;
+          let presenceRef = null;
+          let myPresenceRef = null;
+          let connectedRef = null;
+          let pingsRef = null;
+          let activityRef = null;
+          let joinedAtTs = 0;
+          let lastSeenActivityId = null;
+
+          function renderOnlineUsersUI() {
+            const count = Math.max(1, state.onlineUsers.length);
+            const countBadge = document.getElementById('roomOnlineCountBadge');
+            const usersListEl = document.getElementById('roomOnlineUsersList');
+            const label = document.getElementById('roomStatusLabel');
+
+            if (countBadge) {
+              countBadge.textContent = `${count} ${count === 1 ? 'en sala' : 'en sala'}`;
+            }
+
+            if (state.roomId && label) {
+              label.textContent = state.isViewOnly
+                ? `Sala: ${state.roomId} (Ver · ${count})`
+                : `Sala: ${state.roomId} · ${count}`;
+            }
+
+            if (usersListEl) {
+              if (state.onlineUsers.length === 0) {
+                usersListEl.innerHTML = `<span class="text-[11px] text-slate-400">Conectando...</span>`;
+              } else {
+                usersListEl.innerHTML = state.onlineUsers.map((u) => {
+                  const isMe = u.id === state.clientId;
+                  const roleTag = u.viewOnly ? ' 👁️' : '';
+                  return `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slatePanel border border-white/10 text-[11px] font-semibold text-slate-100">
+                      <span class="w-2 h-2 rounded-full shrink-0" style="background:${escapeHtml(u.color || '#06b6d4')}"></span>
+                      <span>${escapeHtml(u.name || 'Jugador')}${isMe ? ' (tú)' : ''}${roleTag}</span>
+                    </span>
+                  `;
+                }).join('');
+              }
+            }
+          }
 
           function updateRoomUI() {
             const btn = document.getElementById('roomStatusBtn');
@@ -1028,35 +1251,135 @@
             const activePanel = document.getElementById('roomActivePanel');
             const joinForm = document.getElementById('roomJoinForm');
             const badge = document.getElementById('roomActiveNameBadge');
+            const syncStatusText = document.getElementById('roomSyncStatusText');
             const inviteInput = document.getElementById('roomInviteLinkInput');
+            const viewOnlyInput = document.getElementById('roomViewOnlyLinkInput');
+            const editLinkContainer = document.getElementById('roomEditLinkContainer');
+            const activeNickInput = document.getElementById('roomActiveNicknameInput');
+            const joinNickInput = document.getElementById('roomNicknameInput');
+            const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+
+            if (joinNickInput && !joinNickInput.value) {
+              joinNickInput.value = state.nickname;
+            }
+            if (activeNickInput) {
+              activeNickInput.value = state.nickname;
+            }
 
             if (state.roomId) {
-              btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition';
-              dot.textContent = '🟢';
-              label.textContent = `Sala: ${state.roomId}`;
+              const count = Math.max(1, state.onlineUsers.length);
+              if (state.isViewOnly) {
+                btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/45 text-xs font-bold text-amber-200 transition';
+                dot.textContent = '👁️';
+                label.textContent = `Sala: ${state.roomId} (Ver · ${count})`;
+                syncStatusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Modo Solo Lectura`;
+                syncStatusText.className = 'text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5';
+                editLinkContainer.classList.add('hidden');
+                viewOnlyBanner.classList.remove('hidden');
+              } else {
+                btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition';
+                dot.textContent = '🟢';
+                label.textContent = `Sala: ${state.roomId} · ${count}`;
+                syncStatusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sincronizando en vivo`;
+                syncStatusText.className = 'text-[11px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5';
+                editLinkContainer.classList.remove('hidden');
+                viewOnlyBanner.classList.add('hidden');
+              }
               activePanel.classList.remove('hidden');
               joinForm.classList.add('hidden');
               badge.textContent = state.roomId;
-              inviteInput.value = buildRoomInviteUrl(state.roomId);
+              inviteInput.value = buildRoomInviteUrl(state.roomId, false);
+              viewOnlyInput.value = buildRoomInviteUrl(state.roomId, true);
+              renderOnlineUsersUI();
             } else {
               btn.className = 'flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-slatePanel/90 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 transition';
               dot.textContent = '🌐';
               label.textContent = 'Sala Online';
               activePanel.classList.add('hidden');
               joinForm.classList.remove('hidden');
+              viewOnlyBanner.classList.add('hidden');
             }
           }
 
           function detachListeners() {
             if (markersRef) markersRef.off();
             if (fogBatchesRef) fogBatchesRef.off();
+            if (presenceRef) presenceRef.off();
+            if (connectedRef) connectedRef.off();
+            if (pingsRef) pingsRef.off();
+            if (activityRef) activityRef.off();
+            if (myPresenceRef) {
+              myPresenceRef.remove().catch(() => {});
+            }
             activeRoomRef = null;
             markersRef = null;
             fogBatchesRef = null;
+            presenceRef = null;
+            myPresenceRef = null;
+            connectedRef = null;
+            pingsRef = null;
+            activityRef = null;
             state.roomConnected = false;
+            state.onlineUsers = [];
           }
 
-          async function joinRoom(rawRoomId, seedLocalIfEmpty = false) {
+          function writeMyPresence() {
+            if (!myPresenceRef) return;
+            myPresenceRef.onDisconnect().remove().catch(() => {});
+            myPresenceRef.set({
+              id: state.clientId,
+              name: state.nickname,
+              color: state.userColor,
+              viewOnly: state.isViewOnly,
+              joinedAt: firebase.database.ServerValue.TIMESTAMP
+            }).catch(() => {});
+          }
+
+          function updateNickname(newName) {
+            const clean = String(newName || '').trim().slice(0, 20);
+            if (!clean) return;
+            state.nickname = clean;
+            localStorage.setItem('leonida_coop_nickname', clean);
+            if (state.roomId && myPresenceRef) {
+              writeMyPresence();
+            }
+            updateRoomUI();
+          }
+
+          function broadcastActivity(message) {
+            if (!activityRef || state.isViewOnly) return;
+            const actId = 'act_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+            lastSeenActivityId = actId;
+            activityRef.set({
+              id: actId,
+              actorId: state.clientId,
+              actorName: state.nickname,
+              message,
+              ts: Date.now()
+            }).catch(() => {});
+          }
+
+          function sendPing(latlng) {
+            const pingPayload = {
+              lat: Number(latlng.lat.toFixed(6)),
+              lng: Number(latlng.lng.toFixed(6)),
+              senderId: state.clientId,
+              senderName: state.nickname,
+              color: state.userColor,
+              ts: Date.now()
+            };
+
+            // Local immediate feedback
+            renderTacticalPing(pingPayload);
+
+            if (!pingsRef || state.isViewOnly) return;
+            const pushed = pingsRef.push(pingPayload);
+            setTimeout(() => {
+              pushed.remove().catch(() => {});
+            }, 6500);
+          }
+
+          async function joinRoom(rawRoomId, seedLocalIfEmpty = false, viewOnly = false) {
             const roomId = sanitizeRoomId(rawRoomId);
             if (!roomId) {
               showToast('Escribe un nombre válido para la sala', 'error');
@@ -1069,25 +1392,42 @@
 
             detachListeners();
             state.roomId = roomId;
+            state.isViewOnly = Boolean(viewOnly);
             state.pendingFogBatch = [];
-            syncBrowserUrlWithRoom(roomId);
+            joinedAtTs = Date.now();
+            lastSeenActivityId = null;
+
+            if (state.isViewOnly) {
+              setActiveTool('pan');
+            }
+
+            syncBrowserUrlWithRoom(roomId, state.isViewOnly);
             updateRoomUI();
 
             activeRoomRef = firebaseDb.ref(`rooms/${roomId}`);
             markersRef = activeRoomRef.child('markers');
             fogBatchesRef = activeRoomRef.child('fogBatches');
+            presenceRef = activeRoomRef.child('presence');
+            myPresenceRef = presenceRef.child(state.clientId);
+            pingsRef = activeRoomRef.child('pings');
+            activityRef = activeRoomRef.child('lastActivity');
+            connectedRef = firebaseDb.ref('.info/connected');
 
             try {
               const snap = await activeRoomRef.once('value');
               const existing = snap.val();
 
-              if (!existing && seedLocalIfEmpty) {
+              if (!existing && seedLocalIfEmpty && !state.isViewOnly) {
                 const localMarkers = migrateMarkers(safeLoadArray(PINS_STORAGE_KEY));
                 const localFog = safeLoadArray(FOG_STROKES_KEY);
                 const markersMap = {};
                 localMarkers.forEach((m, idx) => {
                   if (m && m.id) {
-                    markersMap[m.id] = { ...m, createdTs: m.createdTs || (Date.now() - idx * 1000) };
+                    markersMap[m.id] = {
+                      ...m,
+                      createdBy: m.createdBy || state.nickname,
+                      createdTs: m.createdTs || (Date.now() - idx * 1000)
+                    };
                   }
                 });
 
@@ -1104,6 +1444,38 @@
               leaveRoom(false);
               return false;
             }
+
+            // Presence tracking with automatic disconnect cleanup
+            connectedRef.on('value', (snap) => {
+              if (snap.val() === true) {
+                writeMyPresence();
+              }
+            });
+
+            presenceRef.on('value', (snap) => {
+              const val = snap.val() || {};
+              state.onlineUsers = Object.values(val);
+              renderOnlineUsersUI();
+            });
+
+            // Real-time Tactical Pings
+            pingsRef.on('child_added', (snap) => {
+              const ping = snap.val();
+              if (!ping || typeof ping.lat !== 'number' || typeof ping.lng !== 'number') return;
+              if (ping.senderId === state.clientId) return; // Already rendered locally
+              if (ping.ts && ping.ts < joinedAtTs - 2000) return; // Ignore stale pings
+              renderTacticalPing(ping);
+            });
+
+            // Real-time Activity Toasts
+            activityRef.on('value', (snap) => {
+              const act = snap.val();
+              if (!act || !act.id || act.id === lastSeenActivityId) return;
+              lastSeenActivityId = act.id;
+              if (act.actorId === state.clientId) return;
+              if (act.ts && act.ts < joinedAtTs) return;
+              showToast(`👤 ${act.actorName || 'Alguien'} ${act.message}`, 'info');
+            });
 
             // Listen to real-time markers updates
             markersRef.on('value', (snap) => {
@@ -1142,15 +1514,21 @@
             });
 
             state.roomConnected = true;
-            showToast(`🟢 Conectado a la sala "${roomId}"`, 'success');
+            showToast(
+              state.isViewOnly
+                ? `👁️ Conectado en Solo Lectura a "${roomId}"`
+                : `🟢 Conectado a la sala "${roomId}" como ${state.nickname}`,
+              'success'
+            );
             return true;
           }
 
           function leaveRoom(notify = true) {
             detachListeners();
             state.roomId = null;
+            state.isViewOnly = false;
             state.pendingFogBatch = [];
-            syncBrowserUrlWithRoom('');
+            syncBrowserUrlWithRoom('', false);
             updateRoomUI();
 
             // Restore local storage state
@@ -1165,24 +1543,28 @@
             }
           }
 
-          function upsertMarker(pin) {
-            if (!markersRef || !pin || !pin.id) return;
-            markersRef.child(pin.id).set(pin).catch((err) => {
+          function upsertMarker(pin, activityMsg = '') {
+            if (!markersRef || !pin || !pin.id || state.isViewOnly) return;
+            markersRef.child(pin.id).set(pin).then(() => {
+              if (activityMsg) broadcastActivity(activityMsg);
+            }).catch((err) => {
               console.error('Error guardando pin en sala:', err);
               showToast('Error al sincronizar el pin', 'error');
             });
           }
 
-          function removeMarker(id) {
-            if (!markersRef || !id) return;
-            markersRef.child(id).remove().catch((err) => {
+          function removeMarker(id, title = '') {
+            if (!markersRef || !id || state.isViewOnly) return;
+            markersRef.child(id).remove().then(() => {
+              if (title) broadcastActivity(`eliminó "${title}"`);
+            }).catch((err) => {
               console.error('Error eliminando pin en sala:', err);
               showToast('Error al eliminar el pin de la sala', 'error');
             });
           }
 
           function replaceAllMarkers(markersArr) {
-            if (!markersRef) return;
+            if (!markersRef || state.isViewOnly) return;
             const markersMap = {};
             markersArr.forEach((m, idx) => {
               if (m && m.id) {
@@ -1195,7 +1577,7 @@
           }
 
           function flushPendingFogBatch() {
-            if (!fogBatchesRef || state.pendingFogBatch.length === 0) return;
+            if (!fogBatchesRef || state.pendingFogBatch.length === 0 || state.isViewOnly) return;
             const batchToSend = state.pendingFogBatch.slice();
             state.pendingFogBatch = [];
             fogBatchesRef.push(batchToSend).catch((err) => {
@@ -1204,7 +1586,7 @@
           }
 
           function replaceAllFog(strokesArr) {
-            if (!fogBatchesRef) return;
+            if (!fogBatchesRef || state.isViewOnly) return;
             state.pendingFogBatch = [];
             const payload = Array.isArray(strokesArr) && strokesArr.length > 0
               ? { ['reset_' + Date.now()]: strokesArr }
@@ -1216,6 +1598,9 @@
 
           return {
             updateRoomUI,
+            updateNickname,
+            sendPing,
+            broadcastActivity,
             joinRoom,
             leaveRoom,
             upsertMarker,
@@ -1523,11 +1908,13 @@
         });
 
         async function handleCoverAllFog() {
+          if (checkReadOnlyGuard()) return;
           const ok = await showConfirm('¿Difuminar todo el mapa de cero?', 'Se borrarán las zonas descubiertas y toda Leonida volverá a quedar difuminada.');
           if (!ok) return;
           state.fogStrokes = [];
           fogController.setStrokes(state.fogStrokes);
           saveFogStrokes();
+          if (state.roomId) roomSync.broadcastActivity('reinició la niebla del mapa');
           if (state.fogBlurMode === 'none') {
             state.fogBlurMode = 'soft';
             localStorage.setItem('leonida_fog_blur_mode', 'soft');
@@ -1537,6 +1924,7 @@
         }
 
         async function handleRevealAllFog() {
+          if (checkReadOnlyGuard()) return;
           const ok = await showConfirm('¿Despejar todo el mapa?', 'Se revelará todo el mapa. Puedes hacer copia de seguridad antes con Exportar .JSON.');
           if (!ok) return;
           state.fogStrokes = [
@@ -1544,6 +1932,7 @@
           ];
           fogController.setStrokes(state.fogStrokes);
           saveFogStrokes();
+          if (state.roomId) roomSync.broadcastActivity('despejó todo el mapa');
           showToast('Mapa despejado por completo');
         }
 
@@ -1554,19 +1943,38 @@
         document.getElementById('modalRevealAllFogBtn').addEventListener('click', handleRevealAllFog);
 
         // =========================================================================
-        // 6. CUSTOM CONTEXT MARKERS + GROUPS / BRANCHES + ROUTE LINES
+        // 6. CUSTOM CONTEXT MARKERS + GROUPS / BRANCHES + ROUTE LINES + LIVE PINGS
         // =========================================================================
         const groupLinesLayer = L.layerGroup().addTo(map);
         const markersLayer = L.layerGroup().addTo(map);
+        const pingsLayer = L.layerGroup().addTo(map);
         const markerInstances = new Map();
 
-        function getUniqueGroups() {
-          const groups = new Set();
-          state.markers.forEach((m) => {
-            const g = (m.group || '').trim();
-            if (g) groups.add(g);
+        function renderTacticalPing(ping) {
+          const color = ping.color || '#06b6d4';
+          const sender = ping.senderName || 'Jugador';
+          const icon = L.divIcon({
+            className: '',
+            iconSize: [0, 0],
+            iconAnchor: [0, 0],
+            html: `
+              <div class="tactical-ping-wrapper" style="--ping-color:${escapeHtml(color)}">
+                <span class="tactical-ping-wave"></span>
+                <span class="tactical-ping-wave wave-2"></span>
+                <span class="tactical-ping-core"></span>
+                <div class="tactical-ping-tag">📡 ${escapeHtml(sender)}</div>
+              </div>
+            `
           });
-          return Array.from(groups).sort((a, b) => a.localeCompare(b, 'es'));
+
+          const marker = L.marker([ping.lat, ping.lng], { icon, interactive: false, zIndexOffset: 1200 }).addTo(pingsLayer);
+          playTacticalPingSound();
+          if (ping.senderId !== state.clientId) {
+            showToast(`📡 ${sender} lanzó un ping en el mapa`, 'info');
+          }
+          setTimeout(() => {
+            pingsLayer.removeLayer(marker);
+          }, 5200);
         }
 
         function saveMarkers() {
@@ -1674,21 +2082,42 @@
             const leafletMarker = L.marker([m.lat, m.lng], { icon });
 
             let statusActionBtn = '';
-            if (m.category === 'interior_pending') {
-              statusActionBtn = `
-                <button onclick="window.toggleInteriorStatusById('${m.id}')"
-                  class="w-full px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition flex items-center justify-center gap-1.5">
-                  <span>✅ Marcar como Completado</span>
-                </button>
-              `;
-            } else if (m.category === 'interior_done') {
-              statusActionBtn = `
-                <button onclick="window.toggleInteriorStatusById('${m.id}')"
-                  class="w-full px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-xs font-semibold text-amber-200 transition flex items-center justify-center gap-1.5">
-                  <span>⚠️ Reabrir como Pendiente</span>
-                </button>
-              `;
+            if (!state.isViewOnly) {
+              if (m.category === 'interior_pending') {
+                statusActionBtn = `
+                  <button onclick="window.toggleInteriorStatusById('${m.id}')"
+                    class="w-full px-3 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/45 text-xs font-bold text-emerald-200 transition flex items-center justify-center gap-1.5">
+                    <span>✅ Marcar como Completado</span>
+                  </button>
+                `;
+              } else if (m.category === 'interior_done') {
+                statusActionBtn = `
+                  <button onclick="window.toggleInteriorStatusById('${m.id}')"
+                    class="w-full px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-xs font-semibold text-amber-200 transition flex items-center justify-center gap-1.5">
+                    <span>⚠️ Reabrir como Pendiente</span>
+                  </button>
+                `;
+              }
             }
+
+            const authorMeta = m.createdBy
+              ? ` · Por <span class="text-slate-300 font-semibold">${escapeHtml(m.createdBy)}</span>`
+              : '';
+
+            const editControlsHtml = state.isViewOnly
+              ? `<div class="pt-1 text-[10px] text-amber-300/80 text-center font-medium">🔒 Modo solo lectura</div>`
+              : `
+                <div class="pt-1 flex items-center justify-between gap-2">
+                  <button onclick="window.deletePinById('${m.id}')"
+                    class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-[11px] font-semibold text-rose-300 transition">
+                    🗑️ Eliminar
+                  </button>
+                  <button onclick="window.editPinById('${m.id}')"
+                    class="px-3 py-1.5 rounded-lg bg-viceCyan/20 hover:bg-viceCyan/30 border border-viceCyan/40 text-[11px] font-semibold text-cyan-200 transition">
+                    ✏️ Editar Nota
+                  </button>
+                </div>
+              `;
 
             const groupBadgeHtml = grp ? `
               <button onclick="window.fitMarkerGroupById('${m.id}')"
@@ -1710,7 +2139,7 @@
                 </div>
                 <div>
                   <h3 class="text-sm font-bold text-white leading-snug">${escapeHtml(m.title)}</h3>
-                  <p class="text-[10px] font-mono text-slate-400 mt-0.5">Lat: ${m.lat.toFixed(4)} · Lng: ${m.lng.toFixed(4)}</p>
+                  <p class="text-[10px] font-mono text-slate-400 mt-0.5">Lat: ${m.lat.toFixed(4)} · Lng: ${m.lng.toFixed(4)}${authorMeta}</p>
                 </div>
                 <div class="bg-black/40 border border-white/10 rounded-xl p-2.5 max-h-40 overflow-y-auto">
                   <p class="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">${
@@ -1718,16 +2147,7 @@
                   }</p>
                 </div>
                 ${statusActionBtn}
-                <div class="pt-1 flex items-center justify-between gap-2">
-                  <button onclick="window.deletePinById('${m.id}')"
-                    class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-[11px] font-semibold text-rose-300 transition">
-                    🗑️ Eliminar
-                  </button>
-                  <button onclick="window.editPinById('${m.id}')"
-                    class="px-3 py-1.5 rounded-lg bg-viceCyan/20 hover:bg-viceCyan/30 border border-viceCyan/40 text-[11px] font-semibold text-cyan-200 transition">
-                    ✏️ Editar Nota
-                  </button>
-                </div>
+                ${editControlsHtml}
               </div>
             `;
 
@@ -1761,14 +2181,18 @@
         };
 
         window.toggleInteriorStatusById = (id) => {
+          if (checkReadOnlyGuard()) return;
           const idx = state.markers.findIndex(item => item.id === id);
           if (idx === -1) return;
           const curr = state.markers[idx];
           const nextCat = curr.category === 'interior_pending' ? 'interior_done' : 'interior_pending';
-          state.markers[idx] = { ...curr, category: nextCat };
+          state.markers[idx] = { ...curr, category: nextCat, updatedBy: state.nickname };
           map.closePopup();
           if (state.roomId) {
-            roomSync.upsertMarker(state.markers[idx]);
+            const msg = nextCat === 'interior_done'
+              ? `marcó "${curr.title}" como completado`
+              : `reabrió "${curr.title}" como pendiente`;
+            roomSync.upsertMarker(state.markers[idx], msg);
           } else {
             saveMarkers();
           }
@@ -1781,6 +2205,7 @@
         };
 
         window.editPinById = (id) => {
+          if (checkReadOnlyGuard()) return;
           const m = state.markers.find(item => item.id === id);
           if (!m) return;
           map.closePopup();
@@ -1788,6 +2213,7 @@
         };
 
         window.deletePinById = async (id) => {
+          if (checkReadOnlyGuard()) return;
           const m = state.markers.find(item => item.id === id);
           if (!m) return;
           map.closePopup();
@@ -1795,7 +2221,7 @@
           if (!ok) return;
           state.markers = state.markers.filter(item => item.id !== id);
           if (state.roomId) {
-            roomSync.removeMarker(id);
+            roomSync.removeMarker(id, m.title);
           } else {
             saveMarkers();
           }
@@ -1810,6 +2236,9 @@
         const hudRightPanText = document.getElementById('hudRightPanText');
 
         function setActiveTool(tool) {
+          if (tool !== 'pan' && checkReadOnlyGuard()) {
+            tool = 'pan';
+          }
           state.tool = tool;
           state.isPaintingFog = false;
           state.isRightClickPanning = false;
@@ -1903,6 +2332,19 @@
             return;
           }
 
+          // Middle-click -> Tactical Live Ping ("¡Mira aquí!")
+          if (e.button === 1) {
+            e.preventDefault();
+            if (state.roomId && state.isViewOnly) {
+              showToast('🔒 En modo solo lectura no puedes enviar pings a la sala', 'info');
+              return;
+            }
+            const rect = map.getContainer().getBoundingClientRect();
+            const latlng = map.containerPointToLatLng([e.clientX - rect.left, e.clientY - rect.top]);
+            roomSync.sendPing(latlng);
+            return;
+          }
+
           const isFogTool = state.tool === 'eraseFog' || state.tool === 'paintFog';
           if (!isFogTool) return;
 
@@ -1951,7 +2393,18 @@
         });
 
         map.on('click', (e) => {
+          // Alt + Click -> Tactical Live Ping ("¡Mira aquí!")
+          if (e.originalEvent.altKey) {
+            if (state.roomId && state.isViewOnly) {
+              showToast('🔒 En modo solo lectura no puedes enviar pings a la sala', 'info');
+              return;
+            }
+            roomSync.sendPing(e.latlng);
+            return;
+          }
+
           if (state.tool === 'pin' || e.originalEvent.shiftKey) {
+            if (checkReadOnlyGuard()) return;
             openMarkerModalForCreate(e.latlng);
           }
         });
@@ -2071,6 +2524,7 @@
 
         document.getElementById('markerForm').addEventListener('submit', (e) => {
           e.preventDefault();
+          if (checkReadOnlyGuard()) return;
           const title = pinTitleInput.value.trim();
           if (!title) return;
 
@@ -2085,10 +2539,11 @@
                 title,
                 group,
                 category: state.selectedModalCategory,
-                notes
+                notes,
+                updatedBy: state.roomId ? state.nickname : state.markers[idx].updatedBy
               };
               if (state.roomId) {
-                roomSync.upsertMarker(state.markers[idx]);
+                roomSync.upsertMarker(state.markers[idx], `editó "${title}"`);
               }
             }
             showToast('Marcador actualizado', 'success');
@@ -2101,12 +2556,13 @@
               group,
               category: state.selectedModalCategory,
               notes,
+              createdBy: state.roomId ? state.nickname : '',
               createdTs: Date.now(),
               createdAt: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
             };
             state.markers.unshift(newPin);
             if (state.roomId) {
-              roomSync.upsertMarker(newPin);
+              roomSync.upsertMarker(newPin, `añadió "${title}"`);
             }
             showToast(group ? `Guardado en la rama "${group}"` : 'Marcador guardado con su contexto', 'success');
           }
@@ -2167,6 +2623,8 @@
         // Online Room Modal Events
         const roomModal = document.getElementById('roomModal');
         const roomNameInput = document.getElementById('roomNameInput');
+        const roomNicknameInput = document.getElementById('roomNicknameInput');
+        const roomActiveNicknameInput = document.getElementById('roomActiveNicknameInput');
         const roomSeedLocalCheckbox = document.getElementById('roomSeedLocalCheckbox');
 
         function openRoomModal() {
@@ -2187,24 +2645,45 @@
           roomNameInput.value = rand;
         });
 
+        document.getElementById('saveActiveNicknameBtn').addEventListener('click', () => {
+          const val = roomActiveNicknameInput.value.trim();
+          if (!val) {
+            showToast('Escribe un apodo válido', 'error');
+            return;
+          }
+          roomSync.updateNickname(val);
+          showToast(`Apodo actualizado a "${val}"`, 'success');
+        });
+
         document.getElementById('roomJoinForm').addEventListener('submit', async (e) => {
           e.preventDefault();
-          const joined = await roomSync.joinRoom(roomNameInput.value, roomSeedLocalCheckbox.checked);
+          const nick = roomNicknameInput.value.trim();
+          if (nick) {
+            roomSync.updateNickname(nick);
+          }
+          const joined = await roomSync.joinRoom(roomNameInput.value, roomSeedLocalCheckbox.checked, false);
           if (joined) {
             roomNameInput.value = '';
           }
         });
 
-        document.getElementById('copyRoomLinkBtn').addEventListener('click', () => {
-          const inviteInput = document.getElementById('roomInviteLinkInput');
-          inviteInput.select();
-          inviteInput.setSelectionRange(0, 99999);
+        function copyInputToClipboard(inputEl, successMsg) {
+          inputEl.select();
+          inputEl.setSelectionRange(0, 99999);
           try {
             document.execCommand('copy');
-            showToast('Enlace de sala copiado al portapapeles', 'success');
+            showToast(successMsg, 'success');
           } catch {
             showToast('Copia el enlace manualmente con Ctrl+C', 'info');
           }
+        }
+
+        document.getElementById('copyRoomLinkBtn').addEventListener('click', () => {
+          copyInputToClipboard(document.getElementById('roomInviteLinkInput'), 'Enlace colaborativo copiado');
+        });
+
+        document.getElementById('copyViewOnlyLinkBtn').addEventListener('click', () => {
+          copyInputToClipboard(document.getElementById('roomViewOnlyLinkInput'), 'Enlace de Solo Lectura copiado');
         });
 
         document.getElementById('leaveRoomBtn').addEventListener('click', () => {
@@ -2553,6 +3032,10 @@
         document.getElementById('importBackupInput').addEventListener('change', (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
+          if (checkReadOnlyGuard()) {
+            e.target.value = '';
+            return;
+          }
           const reader = new FileReader();
           reader.onload = (ev) => {
             try {
@@ -2632,8 +3115,9 @@
         roomSync.updateRoomUI();
 
         const initialUrlRoom = getRoomIdFromUrl();
+        const initialViewOnly = getViewOnlyFromUrl();
         if (initialUrlRoom) {
-          roomSync.joinRoom(initialUrlRoom, false);
+          roomSync.joinRoom(initialUrlRoom, false, initialViewOnly);
         } else {
           if (localStorage.getItem(FOG_STROKES_KEY) === null) {
             saveFogStrokes();
